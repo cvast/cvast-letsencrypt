@@ -1,0 +1,7 @@
+version: '2'
+services:   
+    letsencrypt:
+      image: cvast/cvast-letsencrypt:${CVAST_LETSENCRYPT_VERSION}
+      build: 
+        context: .
+        dockerfile: ./Dockerfile
