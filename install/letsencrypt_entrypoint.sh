@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e 
+
 #### Global variables
 NGINX_DEFAULT_CONF=/etc/nginx/conf.d/default.conf
 NGINX_ROOT=/var/www
@@ -26,8 +28,10 @@ LETSENCRYPT_AWS_PARAMETERS=update-certificates
 download_certificates() {
 	echo "Preparing to download new certificate from LetsEncrypt..."
 	mkdir -p ${NGINX_ROOT}/${DOMAIN_NAME}
-		
+	set_folder_permissions	
 	LETSENCRYPT_DOMAIN_PARAMETERS="$(create_domain_name_parameters)"
+	
+	set +e
 	
 	echo "Starting Certbot to download certificate"
 	certbot certonly \
@@ -43,10 +47,13 @@ download_certificates() {
 		--work-dir ${APP_DIR}/workdir \
 		${ADDITIONAL_CERTBOT_PARAMS}
 	
-	if [[ $? != 0 ]]; then
-		echo "Failed to download certificate with Certbot, exiting..."
-		exit 1
+	local exit_code=$?
+	if [[ ${exit_code} != 0 ]]; then
+		echo "Failed to download certificate with Certbot. Exit code: ${exit_code}. Exiting..."
+		exit ${exit_code}
 	fi
+	
+	set -e
 }
 
 renew_certificates() {
@@ -102,6 +109,10 @@ download_certificates_aws() {
 	python letsencrypt-aws.py ${LETSENCRYPT_AWS_PARAMETERS}
 }
 
+display_domain_names() {
+	echo "Provided domain names: ${DOMAIN_NAMES}"
+	echo "Primary domain name: ${PRIMARY_DOMAIN_NAME}"
+}
 
 # Misc
 # set_http_only_nginx_conf() {
@@ -136,10 +147,41 @@ set_nginx_certificate_paths() {
 	sed -i "s\#/etc/letsencrypt/live/localhost#/etc/letsencrypt/live/${PRIMARY_DOMAIN_NAME}#g" ${NGINX_DEFAULT_CONF}
 }
 
-
+set_folder_permissions() {
+	chown root:root -R ${APP_DIR}
+}
 
 
 #### Orchestration
+
+main_orchestration() {
+	if [[ ${DOMAIN_NAMES} == "localhost" ]]; then
+		echo "Running on localhost, so not downloading certificates. Exiting..."
+		exit 0
+	else
+		if [[ ${FORCE_NON_AWS} == True ]]; then
+			run_letsencrypt
+		else
+			set +e
+			check_if_aws
+			local exit_code=$?
+			set -e
+			if [[ ${exit_code} == 1 ]]; then
+				run_letsencrypt
+				echo "Letsencrypt has done its job, exiting..."
+				exit 0
+			elif  [[ ${exit_code} == 0 ]]; then
+				run_letsencrypt_aws
+				echo "Letsencrypt has done its job, exiting..."
+				exit 0
+			else
+				
+				echo "Something went wrong at 'check_if_aws'. Exit code: ${exit_code}. Exiting..."
+				exit ${exit_code}
+			fi	
+		fi
+	fi	
+}
 
 run_letsencrypt_aws() {
 	echo "+++ Executing LetsEncrypt for AWS EC2 instances running behind an Elastic Loadbalancer +++"
@@ -150,18 +192,20 @@ run_letsencrypt_aws() {
 
 run_letsencrypt() {
 	echo "+++ Executing LetsEncrypt in standard mode +++"
+	set +e
 	check_certificate_exists
-	
-	if [[ $? == 0 ]]; then
+	local exit_code=$?
+	set -e
+	if [[ ${exit_code} == 0 ]]; then
 		renew_certificates
 		exit 0
-	elif  [[ $? == 1 ]]; then
+	elif  [[ ${exit_code} == 1 ]]; then
 		download_certificates
 		set_nginx_certificate_paths
 		restart_nginx_config
 	else
-		echo "Something went wrong at 'check_certificate_exists'. Exit code: $?. Exiting..."
-		exit $?
+		echo "Something went wrong at 'check_certificate_exists'. Exit code: ${exit_code}. Exiting..."
+		exit ${exit_code}
 	fi
 	
 }
@@ -203,26 +247,9 @@ else
 fi
 
 check_global_variables
+display_domain_names
+main_orchestration
 
-if [[ ${DOMAIN_NAMES} == "localhost" ]]; then
-	echo "Running on localhost, so not downloading certificates. Exiting..."
-	exit 0
-else
-	if [[ ${FORCE_NON_AWS} == True ]]; then
-		run_letsencrypt
-	else
-		check_if_aws
-		if [[ $? == 1 ]]; then
-			run_letsencrypt
-		elif  [[ $? == 0 ]]; then
-			run_letsencrypt_aws
-		else
-			echo "Something went wrong at 'check_if_aws'. Exit code: $?. Exiting..."
-			exit $?
-		fi	
-	fi
-fi	
-	
 
 
 # if [[ ! ${USE_LETSENCRYPT} == True ]]; then

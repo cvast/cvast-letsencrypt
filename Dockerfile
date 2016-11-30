@@ -25,22 +25,13 @@ WORKDIR ${INSTALL_DIR}
 RUN curl -O https://bootstrap.pypa.io/get-pip.py
 RUN python get-pip.py
 
-RUN useradd -ms /bin/bash letsencrypt
-
-
 COPY ${INSTALL_DIR_LOCAL}/letsencrypt_aws_requirements.txt ${INSTALL_DIR}/letsencrypt_aws_requirements.txt
 RUN pip install -r ${INSTALL_DIR}/letsencrypt_aws_requirements.txt
-
-
 
 COPY ${INSTALL_DIR_LOCAL}/letsencrypt_entrypoint.sh ${INSTALL_DIR}/letsencrypt_entrypoint.sh
 COPY ${INSTALL_DIR_LOCAL}/letsencrypt-aws.py ${INSTALL_DIR}/letsencrypt-aws.py
 COPY ${INSTALL_DIR_LOCAL}/letsencrypt_aws.conf ${INSTALL_DIR}/letsencrypt_aws.conf
-
-RUN chown -R letsencrypt ${INSTALL_DIR}
 RUN dos2unix ${INSTALL_DIR}/letsencrypt_entrypoint.sh
-
-USER letsencrypt
 RUN chmod +x ${INSTALL_DIR}/letsencrypt-aws.py
 RUN chmod +x ${INSTALL_DIR}/letsencrypt_entrypoint.sh
 
