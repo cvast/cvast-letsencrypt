@@ -27,7 +27,7 @@ LETSENCRYPT_AWS_PARAMETERS=update-certificates
 # Default LetsEncrypt functions
 download_certificates() {
 	echo "Preparing to download new certificate from LetsEncrypt..."
-	mkdir -p ${NGINX_ROOT}/${DOMAIN_NAME}
+	mkdir -p ${NGINX_ROOT}/${PRIMARY_DOMAIN_NAME}
 	set_folder_permissions	
 	LETSENCRYPT_DOMAIN_PARAMETERS="$(create_domain_name_parameters)"
 	
@@ -40,7 +40,7 @@ download_certificates() {
 		--non-interactive \
 		--email ${LETSENCRYPT_EMAIL} \
 		--webroot \
-		-w /var/www/${DOMAIN_NAME} \
+		-w /var/www/${PRIMARY_DOMAIN_NAME} \
 		${LETSENCRYPT_DOMAIN_PARAMETERS} \
 		--config-dir ${APP_DIR}/config \
 		--logs-dir ${APP_DIR}/logs \
