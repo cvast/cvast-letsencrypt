@@ -40,7 +40,7 @@ download_certificates() {
 		--non-interactive \
 		--email ${LETSENCRYPT_EMAIL} \
 		--webroot \
-		-w /var/www/${PRIMARY_DOMAIN_NAME} \
+		-w /var/www \
 		${LETSENCRYPT_DOMAIN_PARAMETERS} \
 		--config-dir ${APP_DIR}/config \
 		--logs-dir ${APP_DIR}/logs \
