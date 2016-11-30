@@ -9,18 +9,15 @@ APP_DIR=/letsencrypt
 
 set -- ${DOMAIN_NAMES}
 PRIMARY_DOMAIN_NAME=$1
-LETSENCRYPT_BASEDIR=/etc/letsencrypt
-LETSENCRYPT_DOMAIN_DIR=${LETSENCRYPT_BASEDIR}/live/${PRIMARY_DOMAIN_NAME}
+LETSENCRYPT_BASEDIR=/letsencrypt/config
+LETSENCRYPT_LIVEDIR=${LETSENCRYPT_BASEDIR}/live
+LETSENCRYPT_DOMAIN_DIR=${LETSENCRYPT_LIVEDIR}/${PRIMARY_DOMAIN_NAME}
 LETSENCRYPT_CERTIFICATE_PATH=${LETSENCRYPT_DOMAIN_DIR}/fullchain.pem
 LETSENCRYPT_PRIVATE_KEY_PATH=${LETSENCRYPT_DOMAIN_DIR}/privkey.pem
-
+LETSENCRYPT_AWS_PARAMETERS=update-certificates
 # For Letsencrypt / Certbot verification
 LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
-LETSENCRYPT_BASE_PATH=/etc/letsencrypt
-
-LETSENCRYPT_AWS_PARAMETERS=update-certificates
-
-
+LETSENCRYPT_RENEWAL_SLEEP_TIME="${LETSENCRYPT_RENEWAL_SLEEP_TIME-:12h}"
 
 #### Basic functions
 
@@ -58,7 +55,14 @@ download_certificates() {
 
 renew_certificates() {
 	echo "Checking if certificates needs to be renewed..."
-	certbot renew --dry-run
+	certbot renew
+}
+
+keep_renewing_certificates() {
+	while true; do
+		renew_certificates
+		echo "Next renew attempt will be in: ${LETSENCRYPT_RENEWAL_SLEEP_TIME}"
+		sleep ${LETSENCRYPT_RENEWAL_SLEEP_TIME}
 }
 
 create_domain_name_parameters() {
@@ -115,11 +119,6 @@ display_domain_names() {
 }
 
 # Misc
-# set_http_only_nginx_conf() {
-	# cp ${INSTALL_DIR}/nginx_http_only.conf ${NGINX_DEFAULT_CONF}
-	# sed -i "s/<domain_name>/${DOMAIN_NAME}/g" ${NGINX_DEFAULT_CONF}
-# }
-
 check_variable() {
 	local VARIABLE_VALUE=$1
 	local VARIABLE_NAME=$2
@@ -139,12 +138,8 @@ check_certificate_exists() {
 	fi
 }
 
-restart_nginx_config() {
-	docker kill -s HUP ${NGINX_CONTAINER}
-}
-
 set_nginx_certificate_paths() {
-	sed -i "s#/etc/letsencrypt/live/localhost#/etc/letsencrypt/live/${PRIMARY_DOMAIN_NAME}#g" ${NGINX_DEFAULT_CONF}
+	sed -i "s#${LETSENCRYPT_LIVEDIR}/localhost#${LETSENCRYPT_LIVEDIR}/${PRIMARY_DOMAIN_NAME}#g" ${NGINX_DEFAULT_CONF}
 }
 
 set_folder_permissions() {
@@ -198,16 +193,15 @@ run_letsencrypt() {
 	set -e
 	if [[ ${exit_code} == 0 ]]; then
 		renew_certificates
-		exit 0
 	elif  [[ ${exit_code} == 1 ]]; then
 		download_certificates
 		set_nginx_certificate_paths
-		restart_nginx_config
 	else
 		echo "Something went wrong at 'check_certificate_exists'. Exit code: ${exit_code}. Exiting..."
 		exit ${exit_code}
 	fi
 	
+	keep_renewing_certificates
 }
 
 check_global_variables() {
@@ -249,18 +243,3 @@ fi
 check_global_variables
 display_domain_names
 main_orchestration
-
-
-
-# if [[ ! ${USE_LETSENCRYPT} == True ]]; then
-	# echo "USE_LETSENCRYPT = False, so not downloading any certificate from LetsEncrypt"
-# else
-	# if [[ -d "$LETSENCRYPT_BASE_PATH/live/${DOMAIN_NAME}" ]]; then
-		# echo "Certificate already exists in $LETSENCRYPT_BASE_PATH/live/${DOMAIN_NAME}"
-		# renew_certificates
-	# else
-		# echo "No certificate exists for doman: ${DOMAIN_NAME}"
-		# set_http_only_nginx_conf
-		
-	# fi
-# fi
