@@ -1,7 +1,16 @@
 version: '2'
 services:   
     letsencrypt:
-      image: cvast/cvast-letsencrypt:${CVAST_LETSENCRYPT_VERSION}
+      image: cvast/cvast-letsencrypt:latest
       build: 
         context: .
         dockerfile: ./Dockerfile
+      environment:
+      - DOMAIN_NAMES=
+      - AWS_ACCESS_KEY_ID=
+      - AWS_SECRET_ACCESS_KEY=
+      - AWS_DEFAULT_REGION=
+      - DOMAIN_NAMES=
+      - ELB_NAME=
+      - HTTPS_PORT=
+      - PRIVATE_KEY_PATH=
