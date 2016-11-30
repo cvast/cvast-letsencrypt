@@ -144,7 +144,7 @@ restart_nginx_config() {
 }
 
 set_nginx_certificate_paths() {
-	sed -i "s\#/etc/letsencrypt/live/localhost#/etc/letsencrypt/live/${PRIMARY_DOMAIN_NAME}#g" ${NGINX_DEFAULT_CONF}
+	sed -i "s#/etc/letsencrypt/live/localhost#/etc/letsencrypt/live/${PRIMARY_DOMAIN_NAME}#g" ${NGINX_DEFAULT_CONF}
 }
 
 set_folder_permissions() {
