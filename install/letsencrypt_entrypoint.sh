@@ -3,21 +3,19 @@
 set -e 
 
 #### Global variables
-NGINX_DEFAULT_CONF=/etc/nginx/conf.d/default.conf
 NGINX_ROOT=/var/www
-APP_DIR=/letsencrypt
 
 set -- ${DOMAIN_NAMES}
 PRIMARY_DOMAIN_NAME=$1
-LETSENCRYPT_BASEDIR=/letsencrypt/config
+LETSENCRYPT_BASEDIR="${LETSENCRYPT_BASEDIR:-/etc/letsencrypt}"
 LETSENCRYPT_LIVEDIR=${LETSENCRYPT_BASEDIR}/live
 LETSENCRYPT_DOMAIN_DIR=${LETSENCRYPT_LIVEDIR}/${PRIMARY_DOMAIN_NAME}
 LETSENCRYPT_CERTIFICATE_PATH=${LETSENCRYPT_DOMAIN_DIR}/fullchain.pem
 LETSENCRYPT_PRIVATE_KEY_PATH=${LETSENCRYPT_DOMAIN_DIR}/privkey.pem
-LETSENCRYPT_AWS_PARAMETERS=update-certificates
+LETSENCRYPT_AWS_PARAMETERS=update-certificates --persistent
 # For Letsencrypt / Certbot verification
 LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
-LETSENCRYPT_RENEWAL_SLEEP_TIME="${LETSENCRYPT_RENEWAL_SLEEP_TIME-:12h}"
+LETSENCRYPT_RENEWAL_SLEEP_TIME="${LETSENCRYPT_RENEWAL_SLEEP_TIME:-12h}"
 
 #### Basic functions
 
@@ -37,11 +35,8 @@ download_certificates() {
 		--non-interactive \
 		--email ${LETSENCRYPT_EMAIL} \
 		--webroot \
-		-w /var/www \
+		-w ${NGINX_ROOT} \
 		${LETSENCRYPT_DOMAIN_PARAMETERS} \
-		--config-dir ${APP_DIR}/config \
-		--logs-dir ${APP_DIR}/logs \
-		--work-dir ${APP_DIR}/workdir \
 		${ADDITIONAL_CERTBOT_PARAMS}
 	
 	local exit_code=$?
@@ -58,11 +53,12 @@ renew_certificates() {
 	certbot renew
 }
 
-keep_renewing_certificates() {
+persist_renewal_certificates() {
 	while true; do
 		renew_certificates
 		echo "Next renew attempt will be in: ${LETSENCRYPT_RENEWAL_SLEEP_TIME}"
 		sleep ${LETSENCRYPT_RENEWAL_SLEEP_TIME}
+	done
 }
 
 create_domain_name_parameters() {
@@ -101,15 +97,16 @@ set_letsencrypt_aws_config() {
 				"key_type": "${KEY_TYPE}"
 			}
 		],
-		"acme_account_key": "${PRIVATE_KEY_PATH}"
+		"acme_account_key": "${PRIVATE_KEY_PATH}",
+		"target_certificate_path": "<target_certificate_dir>"
 	}
 EOF
 
 	export LETSENCRYPT_AWS_CONFIG
 }
 
-download_certificates_aws() {
-	echo "Running letsencrypt-aws.py with parameters: ${LETSENCRYPT_AWS_PARAMETERS}"
+download_certificates_letsencrypt_aws() {
+	echo "Running letsencrypt-aws.py to download certificates with parameters: ${LETSENCRYPT_AWS_PARAMETERS}"
 	python letsencrypt-aws.py ${LETSENCRYPT_AWS_PARAMETERS}
 }
 
@@ -138,13 +135,6 @@ check_certificate_exists() {
 	fi
 }
 
-set_nginx_certificate_paths() {
-	sed -i "s#${LETSENCRYPT_LIVEDIR}/localhost#${LETSENCRYPT_LIVEDIR}/${PRIMARY_DOMAIN_NAME}#g" ${NGINX_DEFAULT_CONF}
-}
-
-set_folder_permissions() {
-	chown root:root -R ${APP_DIR}
-}
 
 
 #### Orchestration
@@ -182,7 +172,7 @@ run_letsencrypt_aws() {
 	echo "+++ Executing LetsEncrypt for AWS EC2 instances running behind an Elastic Loadbalancer +++"
 	check_aws_variables
 	set_letsencrypt_aws_config
-	download_certificates_aws
+	download_certificates_letsencrypt_aws
 }
 
 run_letsencrypt() {
@@ -195,13 +185,12 @@ run_letsencrypt() {
 		renew_certificates
 	elif  [[ ${exit_code} == 1 ]]; then
 		download_certificates
-		set_nginx_certificate_paths
 	else
 		echo "Something went wrong at 'check_certificate_exists'. Exit code: ${exit_code}. Exiting..."
 		exit ${exit_code}
 	fi
 	
-	keep_renewing_certificates
+	persist_renewal_certificates
 }
 
 check_global_variables() {
