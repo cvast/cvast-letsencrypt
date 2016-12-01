@@ -339,7 +339,7 @@ def request_certificate(logger, acme_client, elb_name, authorizations, csr):
     return pem_certificate, pem_certificate_chain
 
 
-def update_cert(logger, acme_client, force_issue, cert_request):
+def update_cert(logger, acme_client, force_issue, cert_request, target_certificate_basedir):
     logger.emit("updating-elb", elb_name=cert_request.cert_location.elb_name)
 
     current_cert = cert_request.cert_location.get_current_certificate()
@@ -409,6 +409,13 @@ def update_cert(logger, acme_client, force_issue, cert_request):
             logger, cert_request.hosts,
             private_key, pem_certificate, pem_certificate_chain
         )
+        
+        if target_certificate_dir is not None:
+            primary_hostname = cert_request.hosts.partition(' ')[0]
+            file_name = "fullchain.pem"
+            target_certificate_path = target_certificate_dir + primary_hostname + "/" + file_name
+            save_certificate_to_file(pem_certificate_chain, target_certificate_path)
+            
     finally:
         for authz_record in authorizations:
             logger.emit(
@@ -424,16 +431,17 @@ def update_cert(logger, acme_client, force_issue, cert_request):
             )
 
 
-def update_certs(logger, acme_client, force_issue, certificate_requests):
+def update_certs(logger, acme_client, force_issue, certificate_requests, target_certificate_dir):
     for cert_request in certificate_requests:
         update_cert(
             logger,
             acme_client,
             force_issue,
             cert_request,
+            target_certificate_dir
         )
-
-
+                
+        
 def setup_acme_client(s3_client, acme_directory_url, acme_account_key):
     uri = rfc3986.urlparse(acme_account_key)
     if uri.scheme == "file":
@@ -465,6 +473,10 @@ def acme_client_for_private_key(acme_directory_url, private_key):
         # TODO: support EC keys, when acme.jose does.
         acme_directory_url, key=acme.jose.JWKRSA(key=private_key)
     )
+
+def save_certificate_to_file(certificate, file_path):  
+    with open(file_path, "w") as text_file:
+        text_file.write(certificate)
 
 
 @click.group()
@@ -504,6 +516,9 @@ def update_certificates(persistent=False, force_issue=False):
     acme_client = setup_acme_client(
         s3_client, acme_directory_url, acme_account_key
     )
+    target_certificate_dir = config.get(
+        "target_certificate_dir", None
+    )
 
     certificate_requests = []
     for domain in domains:
@@ -529,7 +544,8 @@ def update_certificates(persistent=False, force_issue=False):
         while True:
             update_certs(
                 logger, acme_client,
-                force_issue, certificate_requests
+                force_issue, certificate_requests,
+                target_certificate_dir
             )
             # Sleep before we check again
             logger.emit("sleeping", duration=PERSISTENT_SLEEP_INTERVAL)
@@ -538,7 +554,8 @@ def update_certificates(persistent=False, force_issue=False):
         logger.emit("running", mode="single")
         update_certs(
             logger, acme_client,
-            force_issue, certificate_requests
+            force_issue, certificate_requests,
+                target_certificate_dir
         )
 
 
@@ -573,6 +590,6 @@ def register(email, out):
         encryption_algorithm=serialization.NoEncryption(),
     ))
 
-
+    
 if __name__ == "__main__":
     cli()
