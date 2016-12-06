@@ -28,7 +28,7 @@ CERTIFICATE_EXPIRATION_THRESHOLD = datetime.timedelta(days=45)
 DEFAULT_PERSISTENT_SLEEP_INTERVAL = 60 * 60 * 24
 DNS_TTL = 30
 
-	
+    
 CERTIFICATE_FILENAME = "fullchain.pem"
 PRIVATEKEY_FILENAME = "privkey.pem"
 
@@ -415,7 +415,7 @@ def update_cert(logger, acme_client, force_issue, cert_request, target_certifica
         )
         
         if target_certificate_dir is not None:
-            save_files_to_disc(logger, cert_request, target_certificate_dir, pem_certificate_chain, private_key)
+            save_certificates_to_disc(logger, cert_request, target_certificate_dir, pem_certificate_chain, private_key)
             
     finally:
         for authz_record in authorizations:
@@ -446,12 +446,7 @@ def update_certs(logger, acme_client, force_issue, certificate_requests, target_
 def setup_acme_client(s3_client, acme_directory_url, acme_account_key):
     uri = rfc3986.urlparse(acme_account_key)
     if uri.scheme == "file":
-        if uri.host is None:
-            path = uri.path
-        elif uri.path is None:
-            path = uri.host
-        else:
-            path = os.path.join(uri.host, uri.path)
+        path = get_filepath(uri)
         with open(path) as f:
             key = f.read()
     elif uri.scheme == "s3":
@@ -468,31 +463,81 @@ def setup_acme_client(s3_client, acme_directory_url, acme_account_key):
     )
     return acme_client_for_private_key(acme_directory_url, key)
 
-
+    
 def acme_client_for_private_key(acme_directory_url, private_key):
     return acme.client.Client(
         # TODO: support EC keys, when acme.jose does.
         acme_directory_url, key=acme.jose.JWKRSA(key=private_key)
     )
 
-def save_file_to_disc(logger, certificate, file_path): 
-    logger.emit("Saving file to disc" , file_path=file_path)
-    with open(file_path, "w") as text_file:
-        text_file.write(certificate)
+    
+def save_acme_key_as_file(logger, bytes, user_provided_path):
+    uri = rfc3986.urlparse(user_provided_path)
+    if uri.scheme == "file":
+        path = get_filepath(uri)
+        save_file_to_disc(logger, bytes, path)
+    elif uri.scheme == "s3":
+        save_file_to_s3(logger, bytes, uri)
+    else:
+        raise ValueError(
+            "Invalid acme account key: {!r}".format(user_provided_path)
+        )
 
-def save_files_to_disc(logger, cert_request, target_certificate_dir, pem_certificate_chain, private_key): 
+
+def save_certificates_to_disc(logger, cert_request, target_certificate_dir, pem_certificate_chain, private_key): 
     primary_hostname = cert_request.hosts[0]
-    target_certificate_domaindir = target_certificate_dir + "/" + primary_hostname
-    target_certificate_path = target_certificate_domaindir + "/" + CERTIFICATE_FILENAME
-    target_privatekey_path = target_certificate_domaindir + "/" + PRIVATEKEY_FILENAME
+    target_certificate_domaindir = os.path.join(target_certificate_dir, primary_hostname)
+    target_certificate_path = os.path.join(target_certificate_domaindir, CERTIFICATE_FILENAME)
+    target_privatekey_path = os.path.join(target_certificate_domaindir, PRIVATEKEY_FILENAME)
     
     save_file_to_disc(logger, pem_certificate_chain, target_certificate_path)
-    save_file_to_disc(logger, private_key, target_privatekey_path)
+    save_binary_to_disc(logger, private_key, target_privatekey_path)
+    
+    
+def save_file_to_s3(logger, body, s3_uri):
+    session = boto3.Session()
+    s3_client = session.client("s3")
+    bucket=s3_uri.host
+    key=s3_uri.path[1:] # uri.path includes a leading "/"
+    
+    logger.emit("Saving file to S3 bucket", Bucket=bucket, Key=key)
+    response = s3_client.put_object(Body=body, Bucket=bucket, Key=key)
+    logger.emit("Response from AWS S3: ", Response=response)
 
-def get_sleep_duration(){
-	sleep_time = os.environ["LETSENCRYPT_RENEWAL_SLEEP_TIME"]
-	return DEFAULT_PERSISTENT_SLEEP_INTERVAL if sleep_time is None else sleep_time
-}
+
+def save_file_to_disc(logger, body, file_path): 
+    logger.emit("Saving file to disc" , file_path=file_path)
+    create_folder_if_not_exists(file_path)
+    with open(file_path, "w") as text_file:
+        text_file.write(body)
+
+		
+def save_binary_to_disc(logger, bytes, file_path): 
+    logger.emit("Saving binary to disc" , file_path=file_path)
+    create_folder_if_not_exists(file_path)
+    with open(file_path, "wb") as text_file:
+        text_file.write(bytes)      
+
+		
+def create_folder_if_not_exists(file_path):
+    folder_path = os.path.dirname(os.path.abspath(file_path))
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+        
+		
+def get_sleep_duration():
+    sleep_time = os.environ["LETSENCRYPT_RENEWAL_SLEEP_TIME"]
+    return DEFAULT_PERSISTENT_SLEEP_INTERVAL if sleep_time is None else sleep_time
+
+
+def get_filepath(uri):
+    if uri.host is None:
+        return uri.path
+    elif uri.path is None:
+        return uri.host
+    else:
+        return os.path.join(uri.host, uri.path)
+
 
 @click.group()
 def cli():
@@ -556,7 +601,7 @@ def update_certificates(persistent=False, force_issue=False):
 
     if persistent:
         logger.emit("running", mode="persistent")
-		sleep_time = get_sleep_duration()
+        sleep_time = get_sleep_duration()
         while True:
             update_certs(
                 logger, acme_client,
@@ -585,11 +630,12 @@ def update_certificates(persistent=False, force_issue=False):
 )
 def register(email, out):
     logger = Logger()
-    config = json.loads(os.environ.get("LETSENCRYPT_AWS_CONFIG", "{}"))
+    config = json.loads(os.environ["LETSENCRYPT_AWS_CONFIG"])
     acme_directory_url = config.get(
         "acme_directory_url", DEFAULT_ACME_DIRECTORY_URL
     )
-
+    acme_account_key = config.get("acme_account_key", None)
+    
     logger.emit("acme-register.generate-key")
     private_key = generate_rsa_private_key()
     acme_client = acme_client_for_private_key(acme_directory_url, private_key)
@@ -600,11 +646,17 @@ def register(email, out):
     )
     logger.emit("acme-register.agree-to-tos")
     acme_client.agree_to_tos(registration)
-    out.write(private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
-        encryption_algorithm=serialization.NoEncryption(),
-    ))
+    
+    private_key_bytes = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption())
+        
+    if acme_account_key:
+        save_acme_key_as_file(logger, private_key_bytes, acme_account_key)
+    else:
+        
+        out.write(private_key_bytes)
 
     
 if __name__ == "__main__":
