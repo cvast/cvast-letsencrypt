@@ -25,8 +25,12 @@ import rfc3986
 DEFAULT_ACME_DIRECTORY_URL = "https://acme-v01.api.letsencrypt.org/directory"
 CERTIFICATE_EXPIRATION_THRESHOLD = datetime.timedelta(days=45)
 # One day
-PERSISTENT_SLEEP_INTERVAL = 60 * 60 * 24
+DEFAULT_PERSISTENT_SLEEP_INTERVAL = 60 * 60 * 24
 DNS_TTL = 30
+
+	
+CERTIFICATE_FILENAME = "fullchain.pem"
+PRIVATEKEY_FILENAME = "privkey.pem"
 
 
 class Logger(object):
@@ -339,7 +343,7 @@ def request_certificate(logger, acme_client, elb_name, authorizations, csr):
     return pem_certificate, pem_certificate_chain
 
 
-def update_cert(logger, acme_client, force_issue, cert_request, target_certificate_basedir):
+def update_cert(logger, acme_client, force_issue, cert_request, target_certificate_dir):
     logger.emit("updating-elb", elb_name=cert_request.cert_location.elb_name)
 
     current_cert = cert_request.cert_location.get_current_certificate()
@@ -411,10 +415,7 @@ def update_cert(logger, acme_client, force_issue, cert_request, target_certifica
         )
         
         if target_certificate_dir is not None:
-            primary_hostname = cert_request.hosts.partition(' ')[0]
-            file_name = "fullchain.pem"
-            target_certificate_path = target_certificate_dir + primary_hostname + "/" + file_name
-            save_certificate_to_file(pem_certificate_chain, target_certificate_path)
+            save_files_to_disc(logger, cert_request, target_certificate_dir, pem_certificate_chain, private_key)
             
     finally:
         for authz_record in authorizations:
@@ -474,10 +475,24 @@ def acme_client_for_private_key(acme_directory_url, private_key):
         acme_directory_url, key=acme.jose.JWKRSA(key=private_key)
     )
 
-def save_certificate_to_file(certificate, file_path):  
+def save_file_to_disc(logger, certificate, file_path): 
+    logger.emit("Saving file to disc" , file_path=file_path)
     with open(file_path, "w") as text_file:
         text_file.write(certificate)
 
+def save_files_to_disc(logger, cert_request, target_certificate_dir, pem_certificate_chain, private_key): 
+    primary_hostname = cert_request.hosts[0]
+    target_certificate_domaindir = target_certificate_dir + "/" + primary_hostname
+    target_certificate_path = target_certificate_domaindir + "/" + CERTIFICATE_FILENAME
+    target_privatekey_path = target_certificate_domaindir + "/" + PRIVATEKEY_FILENAME
+    
+    save_file_to_disc(logger, pem_certificate_chain, target_certificate_path)
+    save_file_to_disc(logger, private_key, target_privatekey_path)
+
+def get_sleep_duration(){
+	sleep_time = os.environ["LETSENCRYPT_RENEWAL_SLEEP_TIME"]
+	return DEFAULT_PERSISTENT_SLEEP_INTERVAL if sleep_time is None else sleep_time
+}
 
 @click.group()
 def cli():
@@ -541,6 +556,7 @@ def update_certificates(persistent=False, force_issue=False):
 
     if persistent:
         logger.emit("running", mode="persistent")
+		sleep_time = get_sleep_duration()
         while True:
             update_certs(
                 logger, acme_client,
@@ -548,8 +564,8 @@ def update_certificates(persistent=False, force_issue=False):
                 target_certificate_dir
             )
             # Sleep before we check again
-            logger.emit("sleeping", duration=PERSISTENT_SLEEP_INTERVAL)
-            time.sleep(PERSISTENT_SLEEP_INTERVAL)
+            logger.emit("sleeping", duration=sleep_time)
+            time.sleep(sleep_time)
     else:
         logger.emit("running", mode="single")
         update_certs(

@@ -30,7 +30,6 @@ RUN pip install -r ${INSTALL_DIR}/letsencrypt_aws_requirements.txt
 
 COPY ${INSTALL_DIR_LOCAL}/letsencrypt_entrypoint.sh ${INSTALL_DIR}/letsencrypt_entrypoint.sh
 COPY ${INSTALL_DIR_LOCAL}/letsencrypt-aws.py ${INSTALL_DIR}/letsencrypt-aws.py
-COPY ${INSTALL_DIR_LOCAL}/letsencrypt_aws.conf ${INSTALL_DIR}/letsencrypt_aws.conf
 RUN dos2unix ${INSTALL_DIR}/letsencrypt_entrypoint.sh
 RUN chmod +x ${INSTALL_DIR}/letsencrypt-aws.py
 RUN chmod +x ${INSTALL_DIR}/letsencrypt_entrypoint.sh
