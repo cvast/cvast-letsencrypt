@@ -16,18 +16,22 @@ RUNNING_ON_AWS=False
 # Get the first domain in the list
 set -- ${DOMAIN_NAMES}
 PRIMARY_DOMAIN_NAME=$1
-LETSENCRYPT_BASEDIR="${LETSENCRYPT_BASEDIR:-/etc/letsencrypt}"
+LETSENCRYPT_BASEDIR_DEFAULT=/etc/letsencrypt
+LETSENCRYPT_BASEDIR="${LETSENCRYPT_BASEDIR:-$LETSENCRYPT_BASEDIR_DEFAULT}"
 LETSENCRYPT_LIVEDIR=${LETSENCRYPT_BASEDIR}/live
 LETSENCRYPT_DOMAIN_DIR=${LETSENCRYPT_LIVEDIR}/${PRIMARY_DOMAIN_NAME}
 LETSENCRYPT_CERTIFICATE_PATH=${LETSENCRYPT_DOMAIN_DIR}/fullchain.pem
 LETSENCRYPT_PRIVATE_KEY_PATH=${LETSENCRYPT_DOMAIN_DIR}/privkey.pem
-# For Letsencrypt / Certbot verification
 LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
 LETSENCRYPT_RENEWAL_SLEEP_TIME="${LETSENCRYPT_RENEWAL_SLEEP_TIME:-24h}"
-ACME_DIRECTORY_URL_PRODUCTION="${ACME_DIRECTORY_URL_PRODUCTION:-https://acme-v01.api.letsencrypt.org/directory}"
-ACME_DIRECTORY_URL_STAGING="${ACME_DIRECTORY_URL_STAGING:-https://acme-staging.api.letsencrypt.org/directory}"
+
+ACME_DIRECTORY_URL_PRODUCTION_DEFAULT="https://acme-v01.api.letsencrypt.org/directory"
+ACME_DIRECTORY_URL_STAGING_DEFAULT="https://acme-staging.api.letsencrypt.org/directory"
+ACME_DIRECTORY_URL_PRODUCTION="${ACME_DIRECTORY_URL_PRODUCTION:-$ACME_DIRECTORY_URL_PRODUCTION_DEFAULT}"
+ACME_DIRECTORY_URL_STAGING="${ACME_DIRECTORY_URL_STAGING:-$ACME_DIRECTORY_URL_STAGING_DEFAULT}"
 ACME_DIRECTORY_URL=${ACME_DIRECTORY_URL_STAGING}
-KEY_TYPE="${KEY_TYPE}:-rsa"
+
+KEY_TYPE="${KEY_TYPE:-rsa}"
 FORCE_RENEWAL="${FORCE_RENEWAL:-False}"
 FORCE_RENEWAL_CERTBOT="--force-renewal"
 FORCE_RENEWAL_AWS="--force-issue"
@@ -35,6 +39,8 @@ PERSISTENT_MODE="${PERSISTENT_MODE:-False}"
 PERSISTENT_MODE_AWS="--persistent}"
 ADDITIONAL_PARAMETERS=""
 RUNNING_MODE=""
+
+ELB_PORT="${ELB_PORT:-443}"
 
 HELP_TEXT="
 
@@ -66,14 +72,14 @@ get_certificate:
 
 Automatically download or renew certificate of domain(s) provided through the DOMAIN_NAMES environment variable.
 						
-		--Environment Variables--
+		--Additional Environment Variables--
 		
 			--> Both inside and outside AWS:
 				- Optional:
 					FORCE_RENEWAL: True or False. Force issue of a certificate, even if it is not due for renewal. Default = False.
 					PERSISTENT_MODE: True or False. Keep this Docker container running as a service in order to have your 
 								certificates renewed automatically. Default = False.
-					LETSENCRYPT_RENEWAL_SLEEP_TIME: Interval between renewal checks. Defaults to 24 hours.
+					LETSENCRYPT_RENEWAL_SLEEP_TIME: Interval between renewal checks. Default = 24 hours.
 					
 			--> Outside AWS:
 				+ Required:
@@ -88,24 +94,41 @@ Automatically download or renew certificate of domain(s) provided through the DO
 								(We can not check this, only if it runs on an AWS EC2 instance or not.)
 					DOMAIN_NAMES: List of domain names (in a regular string).
 					ELB_NAME: Elastic Load Balancer name.
-					PRIVATE_KEY_PATH: Location of your account private key (local or AWS S3).
+					PRIVATE_KEY_PATH: Location of your LetsEncrypt/ACME account private key (local or AWS S3). 
+								Format: 'file:///path/to/key.pem' (local file Unix), 
+								'file://C:/path/to/key.pem' (local file Windows), or 
+								's3://bucket-name/object-name'. 
+								The key should be a PEM formatted RSA private key.
+					AWS_DEFAULT_REGION: The AWS region your services are running in.
 
 				- Optional:
-					KEY_TYPE: rsa or ecdsa. Defaults to rsa (string)	
-					LETSENCRYPT_BASEDIR: Base directory for LetsEncrypt files. Defaults to /etc/letsencrypt
-					ACME_DIRECTORY_URL_PRODUCTION: Production URL for LetsEncrypt. Defaults to https://acme-v01.api.letsencrypt.org/directory}
-					ACME_DIRECTORY_URL_STAGING: Staging URL for LetsEncrypt. Defaults to https://acme-staging.api.letsencrypt.org/directory}
+					KEY_TYPE: rsa or ecdsa. Default = rsa.
+					ELB_PORT: Port used by Elastic Load Balancer. Default = 443.
+					LETSENCRYPT_BASEDIR: Base directory for LetsEncrypt files. Default = ${LETSENCRYPT_BASEDIR_DEFAULT}
+					ACME_DIRECTORY_URL_PRODUCTION: Production URL for LetsEncrypt. Default = ${ACME_DIRECTORY_URL_PRODUCTION_DEFAULT}
+					ACME_DIRECTORY_URL_STAGING: Staging URL for LetsEncrypt. Default = ${ACME_DIRECTORY_URL_STAGING_DEFAULT}
 
 _____________
-register_aws:		
+register:		
 
-Register the email address provided through the LETSENCRYPT_EMAIL environment variable with LetsEncrypt when running on AWS servers.
+Manually registers the provided email address with LetsEncrypt/ACME.
+Returns a private key in stout, or in a file if PRIVATE_KEY_PATH is provided. 
+
+Currently this account is currently only used when running behind an AWS ELB.
+In all other situations the registration is done automatically by Certbot. 
+In that case the private key is saved to ${LETSENCRYPT_BASEDIR}
 						
-		--Environment Variables--
+		--Additional Environment Variables--
 		
 			+ Required:
 				LETSENCRYPT_EMAIL: Email address to be registered with LetsEncrypt.
-
+				AWS_DEFAULT_REGION: (Only if you use AWS S3 for storage) The AWS region your services are running in.
+				
+			- Optional:
+				PRIVATE_KEY_PATH: Location to save your LetsEncrypt/ACME account private key to (local or AWS S3).
+							Format: 'file:///path/to/key.pem' (local file Unix), 
+							'file://C:/path/to/key.pem' (local file Windows), or 
+							's3://bucket-name/object-name'.
 			
 -h or --help or help: Display help text
 
@@ -121,7 +144,7 @@ Register the email address provided through the LETSENCRYPT_EMAIL environment va
 download_certificates() {
 	echo "Preparing to download new certificate from LetsEncrypt..."
 	mkdir -p ${NGINX_ROOT}/${PRIMARY_DOMAIN_NAME}
-	LETSENCRYPT_DOMAIN_PARAMETERS="$(create_domain_name_parameters)"
+	LETSENCRYPT_DOMAIN_PARAMETERS="$(get_domain_name_parameters)"
 
 		
 	set +e
@@ -160,8 +183,8 @@ persist_renewal_certificates() {
 	done
 }
 
-create_domain_name_parameters() {
-	letsencrypt_domain_parameters=""
+get_domain_name_parameters() {
+	local letsencrypt_domain_parameters=""
 	domain_name_array=(${DOMAIN_NAMES})
 	for domain_name in ${domain_name_array}; do
 		letsencrypt_domain_parameters+=" -d ${domain_name}"
@@ -192,14 +215,16 @@ check_if_aws() {
 
 set_letsencrypt_aws_config() {
 	echo "Applying settings provided through environment variables..."
+	LETSENCRYPT_AWS_DOMAIN_PARAMETERS="$(get_domain_name_parameters_aws)"
 	LETSENCRYPT_AWS_CONFIG="
 	{
 		\"domains\": [
 			{
 				\"elb\": {
-					\"name\": \"${ELB_NAME}\"
+					\"name\": \"${ELB_NAME}\",
+					\"port\": \"${HTTPS_PORT}\"
 				},
-				\"hosts\": [\"${DOMAIN_NAMES}\"],
+				\"hosts\": [ ${LETSENCRYPT_AWS_DOMAIN_PARAMETERS} ],
 				\"key_type\": \"${KEY_TYPE}\"
 			}
 		],
@@ -212,21 +237,34 @@ set_letsencrypt_aws_config() {
 	export LETSENCRYPT_AWS_CONFIG
 }
 
+get_domain_name_parameters_aws() {
+	local letsencrypt_domain_parameters=""
+	domain_name_array=(${DOMAIN_NAMES})
+	for domain_name in ${domain_name_array}; do
+		if [[ "${letsencrypt_domain_parameters}" == "" ]]; then
+			letsencrypt_domain_parameters+="\"${domain_name}\""
+		else
+			letsencrypt_domain_parameters+=", \"${domain_name}\""
+		fi
+	done
+	echo ${letsencrypt_domain_parameters}
+}
+
 download_certificates_letsencrypt_aws() {
 	echo "Running letsencrypt-aws.py to download certificates with command: update-certificates ${ADDITIONAL_PARAMETERS}"
 	python letsencrypt-aws.py update-certificates ${ADDITIONAL_PARAMETERS}
 }
 
 register_emailaddress() {
-	local emailaddress=$@
-	echo "Running letsencrypt-aws.py to register email address: ${emailaddress}"
-	python letsencrypt-aws.py register ${emailaddress}
+	echo "Running letsencrypt-aws.py to register email address: ${LETSENCRYPT_EMAIL}"
+	python letsencrypt-aws.py register ${LETSENCRYPT_EMAIL}
 }
 
 display_domain_names() {
 	echo "Provided domain names: ${DOMAIN_NAMES}"
 	echo "Primary domain name: ${PRIMARY_DOMAIN_NAME}"
 }
+
 
 # Misc
 check_variable() {
@@ -254,8 +292,10 @@ sleep_for_renewal() {
 
 set_running_mode() {
 	if [[ "${PRODUCTION_MODE}" == True ]]; then
+		echo "Running in Production mode"
 		ACME_DIRECTORY_URL=${ACME_DIRECTORY_URL_PRODUCTION}
 	elif [[ "${PRODUCTION_MODE}" == False  ]]; then
+		echo "Running in Staging mode"
 		RUNNING_MODE="--staging"
 		ACME_DIRECTORY_URL=${ACME_DIRECTORY_URL_STAGING}
 	else
@@ -344,7 +384,7 @@ check_aws_variables() {
 	echo "All aws-specific environment variables provided"
 }
 
-check_register_aws_variables() {
+check_register_variables() {
 	echo "Checking aws-specific environment variables for registering email address..."
 	check_variable ${LETSENCRYPT_EMAIL} LETSENCRYPT_EMAIL
 	echo "All aws-register-specific environment variables provided"
@@ -361,17 +401,17 @@ get_certificate() {
 		exit 0
 	else
 		check_global_variables
+		check_if_aws
 		set_running_mode
 		set_additional_parameters
 		display_domain_names
 		if [[ ${FORCE_NON_ELB} == True ]]; then
-			run_letsencrypt_standard ${ADDITIONAL_PARAMETERS}
+			run_letsencrypt_standard
 		else
-			check_if_aws
 			if [[ ${RUNNING_ON_AWS} == True ]]; then
-				run_letsencrypt_aws ${ADDITIONAL_PARAMETERS}
+				run_letsencrypt_aws
 			else
-				run_letsencrypt_standard ${ADDITIONAL_PARAMETERS}
+				run_letsencrypt_standard
 			fi	
 		fi
 		
@@ -380,19 +420,14 @@ get_certificate() {
 	fi	
 }
 
-register_aws() {
+register() {
+	check_global_variables
+	check_register_variables
 	set_running_mode
-	check_if_aws
-	if [[ ${RUNNING_ON_AWS} == False ]]; then
-		echo "Running an AWS command on a non-AWS environment, exiting..."
-		exit 1
-	else  
-		check_register_aws_variables
-		set_letsencrypt_aws_config
-		register_emailaddress
-		echo "Letsencrypt has done its job, exiting..."
-		exit 0
-	fi
+	set_letsencrypt_aws_config
+	register_emailaddress
+	echo "Letsencrypt has done its job, exiting..."
+	exit 0
 }
 
 
@@ -410,7 +445,7 @@ fi
 if [[ ${COMMAND} == get_certificate ]]; then
 	get_certificate ${OPTIONS}
 elif [[ ${COMMAND} == register ]]; then
-	register_aws ${OPTIONS}
+	register ${OPTIONS}
 elif [[ ${COMMAND} == -h ]] || [[ ${COMMAND} == --help ]] || [[ ${COMMAND} == help ]]; then
 	display_help
 	exit 0
