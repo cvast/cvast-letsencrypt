@@ -2,15 +2,17 @@
 Usage
 =====
 
-
-	--Global Environment Variables--
+  
+	Global Environment Variables
+	----------------------------
 
 		Required:
 			PRODUCTION_MODE: True or False. Use LetsEncrypt's staging or production server to register or get a certificate.
 
 
 
-	**Commands**
+	Commands
+	--------
 
 	________________
 	get_certificate:	
@@ -32,9 +34,10 @@ Usage
 					LETSENCRYPT_EMAIL: Email address to be registered with LetsEncrypt.
 					
 				- Optional:
-					WEB_ROOT: Path used as root for ACME challange. Also point to this path in your web server configuration.
-							e.g.: location ~ /.well-known/acme-challenge { allow all; root ${WEB_ROOT_DEFAULT}; }
-							Default = ${WEB_ROOT_DEFAULT}
+					WEB_ROOT: Path used as root for ACME challange. Also point to this path in your web server configuration
+							(see volume 'webserver-root' in docker-compose.yml below).
+							e.g.: location ~ /.well-known/acme-challenge { allow all; root /var/www; }
+							Default = /var/www
 
 			--> Inside AWS:
 				+ Required:
@@ -52,9 +55,9 @@ Usage
 				- Optional:
 					KEY_TYPE: rsa or ecdsa. Default = rsa.
 					ELB_PORT: Port used by Elastic Load Balancer. Default = 443.
-					LETSENCRYPT_BASEDIR: Base directory for LetsEncrypt files. Default = ${LETSENCRYPT_BASEDIR_DEFAULT}
-					ACME_DIRECTORY_URL_PRODUCTION: Production URL for LetsEncrypt. Default = ${ACME_DIRECTORY_URL_PRODUCTION_DEFAULT}
-					ACME_DIRECTORY_URL_STAGING: Staging URL for LetsEncrypt. Default = ${ACME_DIRECTORY_URL_STAGING_DEFAULT}
+					LETSENCRYPT_BASEDIR: Base directory for LetsEncrypt files. Default = /etc/letsencrypt
+					ACME_DIRECTORY_URL_PRODUCTION: Production URL for LetsEncrypt. Default = https://acme-v01.api.letsencrypt.org/directory
+					ACME_DIRECTORY_URL_STAGING: Staging URL for LetsEncrypt. Default = https://acme-staging.api.letsencrypt.org/directory
 
 	_________
 	register:		
@@ -64,7 +67,7 @@ Usage
 
 	Currently this account is currently only used when running behind an AWS ELB.
 	In all other situations the registration is done automatically by Certbot. 
-	In that case the private key is saved to ${LETSENCRYPT_BASEDIR}
+	In that case the private key is saved to /etc/letsencrypt
 						
 		--Additional Environment Variables--
 		
@@ -77,7 +80,9 @@ Usage
 							Format: 'file:///path/to/key.pem' (local file Unix), 
 							'file://C:/path/to/key.pem' (local file Windows), or 
 							's3://bucket-name/object-name'.
-			
+		
+		
+	_______________________________________
 	-h or --help or help: Display help text
 
 
@@ -94,7 +99,7 @@ docker-compose.yml when not behind an AWS ELB:
         - '80:80'
         - '443:443'
       volumes:
-        - nginx-root:/var/www
+        - webserver-root:/var/www
         - letsencrypt-config:/etc/letsencrypt
     
     letsencrypt:
@@ -110,7 +115,7 @@ docker-compose.yml when not behind an AWS ELB:
         - PRODUCTION_MODE=False
         
     volumes:
-        nginx-root:
+        webserver-root:
         letsencrypt-config:
         
 docker-compose.yml (or other configuration, e.g. ECS) when behind an AWS ELB:
