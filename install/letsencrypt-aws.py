@@ -421,7 +421,8 @@ def update_cert(logger, acme_client, force_issue, cert_request, target_certifica
 
         if target_certificate_dir is not None:
             save_certificates_to_disc(
-                logger, cert_request, target_certificate_dir, pem_certificate_chain, private_key)
+                logger, cert_request, target_certificate_dir, pem_certificate,
+                pem_certificate_chain, private_key)
 
     finally:
         for authz_record in authorizations:
@@ -491,7 +492,7 @@ def save_acme_key_as_file(logger, bytes, user_provided_path):
 
 
 def save_certificates_to_disc(logger, cert_request, target_certificate_dir,
-                              pem_certificate_chain, private_key):
+                              pem_certificate, pem_certificate_chain, private_key):
 
     primary_hostname = cert_request.hosts[0]
     target_certificate_domaindir = os.path.join(
@@ -508,8 +509,9 @@ def save_certificates_to_disc(logger, cert_request, target_certificate_dir,
         format=serialization.PrivateFormat.TraditionalOpenSSL,
         encryption_algorithm=serialization.NoEncryption())
 
-    save_file_to_disc(logger, pem_certificate_chain, target_certificate_path)
     save_binary_to_disc(logger, private_key_bytes, target_privatekey_path)
+    save_full_chain_certificate(
+        logger, pem_certificate, pem_certificate_chain, target_certificate_path)
 
 
 def save_file_to_s3(logger, body, s3_uri):
@@ -537,6 +539,14 @@ def save_binary_to_disc(logger, bytes, file_path):
     create_folder_if_not_exists(file_path)
     with open(file_path, "wb") as text_file:
         text_file.write(bytes)
+
+
+def save_full_chain_certificate(logger, cert1, cert2, file_path):
+    logger.emit("Saving certificates as chain to disc", file_path=file_path)
+    create_folder_if_not_exists(file_path)
+    with open(file_path, "w") as text_file:
+        text_file.write(cert1)
+        text_file.write(cert2)
 
 
 def create_folder_if_not_exists(file_path):
