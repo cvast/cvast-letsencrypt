@@ -4,7 +4,7 @@ COMPLETE_USER_INPUT=$@
 COMMAND=$1
 OPTIONS="${@:2}"
 
-set -e 
+set -e
 
 
 
@@ -47,12 +47,12 @@ HELP_TEXT="
 ______________________
 LETSENCRYPT FOR DOCKER
 
-Developed by the Center for Virtualization and Applied Spatial Technologies (CVAST), 
+Developed by the Center for Virtualization and Applied Spatial Technologies (CVAST),
 University of South Florida
 
 
 This tool can download and renew certificates, including for servers running on Amazon Web Services (AWS) behind an Elastic Load Balancer(ELB).
-It can also be used to register with LetsEncrypt using your email address (this is done automatically when running a server not behind an AWS ELB). 
+It can also be used to register with LetsEncrypt using your email address (this is done automatically when running a server not behind an AWS ELB).
 
 ______
 Usage:
@@ -68,36 +68,36 @@ Usage:
 **Commands**
 
 ________________
-get_certificate:	
+get_certificate:
 
 Automatically download or renew certificate of domain(s) provided through the DOMAIN_NAMES environment variable.
-						
+
 		--Additional Environment Variables--
-		
+
 			--> Both inside and outside AWS:
 				- Optional:
 					FORCE_RENEWAL: True or False. Force issue of a certificate, even if it is not due for renewal. Default = False.
-					PERSISTENT_MODE: True or False. Keep this Docker container running as a service in order to have your 
+					PERSISTENT_MODE: True or False. Keep this Docker container running as a service in order to have your
 								certificates renewed automatically. Default = False.
 					LETSENCRYPT_RENEWAL_SLEEP_TIME: Interval between renewal checks. Default = 24 hours.
-					
+
 			--> Outside AWS:
 				+ Required:
 					DOMAIN_NAMES: List of domain names (in a regular string).
 					LETSENCRYPT_EMAIL: Email address to be registered with LetsEncrypt.
-					
+
 				- Optional:
 
 			--> Inside AWS:
 				+ Required:
-					FORCE_NON_ELB: True of False. Set this to true when running on AWS, but not behind an ELB. 
+					FORCE_NON_ELB: True of False. Set this to true when running on AWS, but not behind an ELB.
 								(We can not check this, only if it runs on an AWS EC2 instance or not.)
 					DOMAIN_NAMES: List of domain names (in a regular string).
 					ELB_NAME: Elastic Load Balancer name.
-					PRIVATE_KEY_PATH: Location of your LetsEncrypt/ACME account private key (local or AWS S3). 
-								Format: 'file:///path/to/key.pem' (local file Unix), 
-								'file://C:/path/to/key.pem' (local file Windows), or 
-								's3://bucket-name/object-name'. 
+					PRIVATE_KEY_PATH: Location of your LetsEncrypt/ACME account private key (local or AWS S3).
+								Format: 'file:///path/to/key.pem' (local file Unix),
+								'file://C:/path/to/key.pem' (local file Windows), or
+								's3://bucket-name/object-name'.
 								The key should be a PEM formatted RSA private key.
 					AWS_DEFAULT_REGION: The AWS region your services are running in.
 
@@ -109,27 +109,27 @@ Automatically download or renew certificate of domain(s) provided through the DO
 					ACME_DIRECTORY_URL_STAGING: Staging URL for LetsEncrypt. Default = ${ACME_DIRECTORY_URL_STAGING_DEFAULT}
 
 _____________
-register:		
+register:
 
 Manually registers the provided email address with LetsEncrypt/ACME.
-Returns a private key in stout, or in a file if PRIVATE_KEY_PATH is provided. 
+Returns a private key in stout, or in a file if PRIVATE_KEY_PATH is provided.
 
 Currently this account is currently only used when running behind an AWS ELB.
-In all other situations the registration is done automatically by Certbot. 
+In all other situations the registration is done automatically by Certbot.
 In that case the private key is saved to ${LETSENCRYPT_BASEDIR}
-						
+
 		--Additional Environment Variables--
-		
+
 			+ Required:
 				LETSENCRYPT_EMAIL: Email address to be registered with LetsEncrypt.
 				AWS_DEFAULT_REGION: (Only if you use AWS S3 for storage) The AWS region your services are running in.
-				
+
 			- Optional:
 				PRIVATE_KEY_PATH: Location to save your LetsEncrypt/ACME account private key to (local or AWS S3).
-							Format: 'file:///path/to/key.pem' (local file Unix), 
-							'file://C:/path/to/key.pem' (local file Windows), or 
+							Format: 'file:///path/to/key.pem' (local file Unix),
+							'file://C:/path/to/key.pem' (local file Windows), or
 							's3://bucket-name/object-name'.
-			
+
 -h or --help or help: Display help text
 
 
@@ -146,9 +146,9 @@ download_certificates() {
 	mkdir -p ${NGINX_ROOT}/${PRIMARY_DOMAIN_NAME}
 	LETSENCRYPT_DOMAIN_PARAMETERS="$(get_domain_name_parameters)"
 
-		
+
 	set +e
-	
+
 	echo "Starting Certbot to download certificate"
 	certbot certonly \
 		--agree-tos \
@@ -160,13 +160,13 @@ download_certificates() {
 		${LETSENCRYPT_DOMAIN_PARAMETERS} \
 		${RUNNING_MODE} \
 		${ADDITIONAL_PARAMETERS}
-	
+
 	local exit_code=$?
 	if [[ ${exit_code} != 0 ]]; then
 		echo "Failed to download certificate with Certbot. Exit code: ${exit_code}. Exiting..."
 		exit ${exit_code}
 	fi
-	
+
 	set -e
 }
 
@@ -200,7 +200,7 @@ check_if_aws() {
 	AWS_PRIVATE_IP=`curl -s http://169.254.169.254/latest/meta-data/local-ipv4`
 	local exit_code=$?
 	set -e
-	
+
 	if [[ $exit_code == 0 ]] && [[ ! -z ${AWS_PRIVATE_IP} ]]; then
 		echo "Running on AWS EC2 instance..."
 		RUNNING_ON_AWS=True
@@ -209,7 +209,7 @@ check_if_aws() {
 		RUNNING_ON_AWS=False
 	else
 		echo "Something went wrong at 'check_if_aws'. Exit code: ${exit_code}. Exiting..."
-		exit ${exit_code}	
+		exit ${exit_code}
 	fi
 }
 
@@ -233,7 +233,7 @@ set_letsencrypt_aws_config() {
 		\"target_certificate_dir\": \"${LETSENCRYPT_LIVEDIR}\"
 	}
 "
-	
+
 	export LETSENCRYPT_AWS_CONFIG
 }
 
@@ -273,7 +273,7 @@ check_variable() {
 	if [[ -z ${VARIABLE_VALUE} ]] || [[ "${VARIABLE_VALUE}" == "" ]]; then
 		echo "ERROR! Environment variable ${VARIABLE_NAME} not specified. Exiting..."
 		exit 1
-	fi	
+	fi
 }
 
 check_certificate_exists() {
@@ -310,8 +310,8 @@ set_additional_parameters() {
 	if [[ "${PERSISTENT_MODE}" == True ]] && [[ "${FORCE_RENEWAL}" == True ]]; then
 		echo "Error: Environment variables PERSISTENT_MODE and FORCE_RENEWAL cannot both be true, exiting..."
 		exit 1
-	fi		
-	
+	fi
+
 	if [[ ${RUNNING_ON_AWS} == True ]]; then
 		if [[ "${PERSISTENT_MODE}" == True ]]; then		
 			ADDITIONAL_PARAMETERS=${PERSISTENT_MODE_AWS}
@@ -349,13 +349,13 @@ run_letsencrypt_standard() {
 	check_certificate_exists
 	local exit_code=$?
 	set -e
-	
+
 	if [[ ${exit_code} == 0 ]]; then
 		renew_certificates
 	else
 		download_certificates
 	fi
-	
+
 	if [[ "${PERSISTENT_MODE}" == True ]]; then
 		sleep_for_renewal
 		persist_renewal_certificates
@@ -393,9 +393,9 @@ check_register_variables() {
 
 
 
-#### Commands 
+#### Commands
 
-get_certificate() {	
+get_certificate() {
 	if [[ "${DOMAIN_NAMES}" == "localhost" ]]; then
 		echo "Running on localhost, so not downloading certificates. Exiting..."
 		exit 0
@@ -412,12 +412,12 @@ get_certificate() {
 				run_letsencrypt_aws
 			else
 				run_letsencrypt_standard
-			fi	
+			fi
 		fi
-		
+
 		echo "Letsencrypt has done its job, exiting..."
 		exit 0
-	fi	
+	fi
 }
 
 register() {
@@ -433,7 +433,7 @@ register() {
 
 
 
-#### Starting point 
+#### Starting point
 
 if [[ -z ${COMPLETE_USER_INPUT} ]]; then
 	echo "No command provided, exiting..."
