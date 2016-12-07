@@ -34,6 +34,7 @@ PRIVATEKEY_FILENAME = "privkey.pem"
 
 
 class Logger(object):
+
     def __init__(self):
         self._out = sys.stdout
 
@@ -65,6 +66,7 @@ def _get_iam_certificate(iam_client, certificate_id):
 
 
 class CertificateRequest(object):
+
     def __init__(self, cert_location, dns_challenge_completer, hosts,
                  key_type):
         self.cert_location = cert_location
@@ -75,6 +77,7 @@ class CertificateRequest(object):
 
 
 class ELBCertificate(object):
+
     def __init__(self, elb_client, iam_client, elb_name, elb_port):
         self.elb_client = elb_client
         self.iam_client = iam_client
@@ -136,6 +139,7 @@ class ELBCertificate(object):
 
 
 class Route53ChallengeCompleter(object):
+
     def __init__(self, route53_client):
         self.route53_client = route53_client
 
@@ -259,6 +263,7 @@ def generate_certificate_name(hosts, cert):
 
 
 class AuthorizationRecord(object):
+
     def __init__(self, host, authz, dns_challenge, change_id):
         self.host = host
         self.authz = authz
@@ -415,7 +420,9 @@ def update_cert(logger, acme_client, force_issue, cert_request, target_certifica
         )
 
         if target_certificate_dir is not None:
-            save_certificates_to_disc(logger, cert_request, target_certificate_dir, pem_certificate_chain, private_key)
+            save_certificates_to_disc(
+                logger, cert_request, target_certificate_dir, pem_certificate_chain, private_key)
+
 
     finally:
         for authz_record in authorizations:
@@ -484,11 +491,19 @@ def save_acme_key_as_file(logger, bytes, user_provided_path):
         )
 
 
-def save_certificates_to_disc(logger, cert_request, target_certificate_dir, pem_certificate_chain, private_key): 
+def save_certificates_to_disc(logger, cert_request, target_certificate_dir,
+                              pem_certificate_chain, private_key):
+
     primary_hostname = cert_request.hosts[0]
-    target_certificate_domaindir = os.path.join(target_certificate_dir, primary_hostname)
-    target_certificate_path = os.path.join(target_certificate_domaindir, CERTIFICATE_FILENAME)
-    target_privatekey_path = os.path.join(target_certificate_domaindir, PRIVATEKEY_FILENAME)
+    target_certificate_domaindir = os.path.join(
+        target_certificate_dir, primary_hostname)
+
+    target_certificate_path = os.path.join(
+        target_certificate_domaindir, CERTIFICATE_FILENAME)
+
+    target_privatekey_path = os.path.join(
+        target_certificate_domaindir, PRIVATEKEY_FILENAME)
+
     private_key_bytes = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.TraditionalOpenSSL,
@@ -501,28 +516,31 @@ def save_certificates_to_disc(logger, cert_request, target_certificate_dir, pem_
 def save_file_to_s3(logger, body, s3_uri):
     session = boto3.Session()
     s3_client = session.client("s3")
-    bucket=s3_uri.host
-    key=s3_uri.path[1:] # uri.path includes a leading "/"
-    
+    bucket = s3_uri.host
+    key = s3_uri.path[1:]  # uri.path includes a leading "/"
+
+
     logger.emit("Saving file to S3 bucket", Bucket=bucket, Key=key)
     response = s3_client.put_object(Body=body, Bucket=bucket, Key=key)
     logger.emit("Response from AWS S3: ", Response=response)
 
 
-def save_file_to_disc(logger, body, file_path): 
-    logger.emit("Saving file to disc" , file_path=file_path)
+def save_file_to_disc(logger, body, file_path):
+    logger.emit("Saving file to disc", file_path=file_path)
+
     create_folder_if_not_exists(file_path)
     with open(file_path, "w") as text_file:
         text_file.write(body)
 
-		
-def save_binary_to_disc(logger, bytes, file_path): 
-    logger.emit("Saving binary to disc" , file_path=file_path)
+
+def save_binary_to_disc(logger, bytes, file_path):
+    logger.emit("Saving binary to disc", file_path=file_path)
+
     create_folder_if_not_exists(file_path)
     with open(file_path, "wb") as text_file:
-        text_file.write(bytes)      
+        text_file.write(bytes)
 
-		
+
 def create_folder_if_not_exists(file_path):
     folder_path = os.path.dirname(os.path.abspath(file_path))
     if not os.path.exists(folder_path):
@@ -620,7 +638,8 @@ def update_certificates(persistent=False, force_issue=False):
         update_certs(
             logger, acme_client,
             force_issue, certificate_requests,
-                target_certificate_dir
+            target_certificate_dir
+
         )
 
 
@@ -652,9 +671,10 @@ def register(email, out):
     acme_client.agree_to_tos(registration)
 
     private_key_bytes = private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption())
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption())
+
 
     if acme_account_key:
         save_acme_key_as_file(logger, private_key_bytes, acme_account_key)
