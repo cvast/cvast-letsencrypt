@@ -28,7 +28,7 @@ CERTIFICATE_EXPIRATION_THRESHOLD = datetime.timedelta(days=45)
 DEFAULT_PERSISTENT_SLEEP_INTERVAL = 60 * 60 * 24
 DNS_TTL = 30
 
-    
+
 CERTIFICATE_FILENAME = "fullchain.pem"
 PRIVATEKEY_FILENAME = "privkey.pem"
 
@@ -413,10 +413,10 @@ def update_cert(logger, acme_client, force_issue, cert_request, target_certifica
             logger, cert_request.hosts,
             private_key, pem_certificate, pem_certificate_chain
         )
-        
+
         if target_certificate_dir is not None:
             save_certificates_to_disc(logger, cert_request, target_certificate_dir, pem_certificate_chain, private_key)
-            
+
     finally:
         for authz_record in authorizations:
             logger.emit(
@@ -441,8 +441,8 @@ def update_certs(logger, acme_client, force_issue, certificate_requests, target_
             cert_request,
             target_certificate_dir
         )
-                
-        
+
+
 def setup_acme_client(s3_client, acme_directory_url, acme_account_key):
     uri = rfc3986.urlparse(acme_account_key)
     if uri.scheme == "file":
@@ -463,14 +463,14 @@ def setup_acme_client(s3_client, acme_directory_url, acme_account_key):
     )
     return acme_client_for_private_key(acme_directory_url, key)
 
-    
+
 def acme_client_for_private_key(acme_directory_url, private_key):
     return acme.client.Client(
         # TODO: support EC keys, when acme.jose does.
         acme_directory_url, key=acme.jose.JWKRSA(key=private_key)
     )
 
-    
+
 def save_acme_key_as_file(logger, bytes, user_provided_path):
     uri = rfc3986.urlparse(user_provided_path)
     if uri.scheme == "file":
@@ -523,8 +523,8 @@ def create_folder_if_not_exists(file_path):
     folder_path = os.path.dirname(os.path.abspath(file_path))
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
-        
-		
+
+
 def get_sleep_duration():
     sleep_time = os.environ["LETSENCRYPT_RENEWAL_SLEEP_TIME"]
     return DEFAULT_PERSISTENT_SLEEP_INTERVAL if sleep_time is None else sleep_time
@@ -635,7 +635,7 @@ def register(email, out):
         "acme_directory_url", DEFAULT_ACME_DIRECTORY_URL
     )
     acme_account_key = config.get("acme_account_key", None)
-    
+
     logger.emit("acme-register.generate-key")
     private_key = generate_rsa_private_key()
     acme_client = acme_client_for_private_key(acme_directory_url, private_key)
@@ -646,18 +646,18 @@ def register(email, out):
     )
     logger.emit("acme-register.agree-to-tos")
     acme_client.agree_to_tos(registration)
-    
+
     private_key_bytes = private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
             encryption_algorithm=serialization.NoEncryption())
-        
+
     if acme_account_key:
         save_acme_key_as_file(logger, private_key_bytes, acme_account_key)
     else:
-        
+
         out.write(private_key_bytes)
 
-    
+
 if __name__ == "__main__":
     cli()
