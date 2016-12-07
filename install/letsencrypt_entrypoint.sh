@@ -10,7 +10,8 @@ set -e
 
 
 #### Global variables
-NGINX_ROOT=/var/www
+WEB_ROOT_DEFAULT=/var/www
+WEB_ROOT="${WEB_ROOT:-$WEB_ROOT_DEFAULT}"
 RUNNING_ON_AWS=False
 
 # Get the first domain in the list
@@ -37,7 +38,7 @@ FORCE_RENEWAL_CERTBOT="--force-renewal"
 FORCE_RENEWAL_AWS="--force-issue"
 PERSISTENT_MODE="${PERSISTENT_MODE:-False}"
 PERSISTENT_MODE_AWS="--persistent}"
-ADDITIONAL_PARAMETERS=""
+ADDITIONAL_PARAMETERS="${ADDITIONAL_PARAMETERS}"
 RUNNING_MODE=""
 
 ELB_PORT="${ELB_PORT:-443}"
@@ -53,6 +54,15 @@ University of South Florida
 
 This tool can download and renew certificates, including for servers running on Amazon Web Services (AWS) behind an Elastic Load Balancer(ELB).
 It can also be used to register with LetsEncrypt using your email address (this is done automatically when running a server not behind an AWS ELB).
+
+Based on:
+	- letsencrypt-aws (https://github.com/alex/letsencrypt-aws)
+	- Official Certbot client (https://certbot.eff.org)
+
+Tested on:
+	- Localhost (registration only)
+	- Single AWS EC2 instance paired with an NginX container
+	- AWS ECS cluster running behind an Elastic Load Balancer (also paired with an Nginx container)
 
 ______
 Usage:
@@ -79,6 +89,8 @@ Automatically download or renew certificate of domain(s) provided through the DO
 					FORCE_RENEWAL: True or False. Force issue of a certificate, even if it is not due for renewal. Default = False.
 					PERSISTENT_MODE: True or False. Keep this Docker container running as a service in order to have your
 								certificates renewed automatically. Default = False.
+					ADDITIONAL_PARAMETERS: Additional parameters for either Certbot or letsencrypt-aws,
+								other than those controlled by FORCE_RENEWAL and PERSISTENT_MODE.
 					LETSENCRYPT_RENEWAL_SLEEP_TIME: Interval between renewal checks. Default = 24 hours.
 
 			--> Outside AWS:
@@ -87,6 +99,9 @@ Automatically download or renew certificate of domain(s) provided through the DO
 					LETSENCRYPT_EMAIL: Email address to be registered with LetsEncrypt.
 
 				- Optional:
+					WEB_ROOT: Path used as root for ACME challange. Also point to this path in your web server configuration.
+							e.g.: location ~ /.well-known/acme-challenge { allow all; root ${WEB_ROOT_DEFAULT}; }
+							Default = ${WEB_ROOT_DEFAULT}
 
 			--> Inside AWS:
 				+ Required:
@@ -143,7 +158,7 @@ In that case the private key is saved to ${LETSENCRYPT_BASEDIR}
 # Default LetsEncrypt functions
 download_certificates() {
 	echo "Preparing to download new certificate from LetsEncrypt..."
-	mkdir -p ${NGINX_ROOT}/${PRIMARY_DOMAIN_NAME}
+	mkdir -p ${WEB_ROOT}/${PRIMARY_DOMAIN_NAME}
 	LETSENCRYPT_DOMAIN_PARAMETERS="$(get_domain_name_parameters)"
 
 
@@ -156,7 +171,7 @@ download_certificates() {
 		--non-interactive \
 		--email ${LETSENCRYPT_EMAIL} \
 		--webroot \
-		-w ${NGINX_ROOT} \
+		-w ${WEB_ROOT} \
 		${LETSENCRYPT_DOMAIN_PARAMETERS} \
 		${RUNNING_MODE} \
 		${ADDITIONAL_PARAMETERS}
@@ -313,17 +328,17 @@ set_additional_parameters() {
 	fi
 
 	if [[ ${RUNNING_ON_AWS} == True ]]; then
-		if [[ "${PERSISTENT_MODE}" == True ]]; then		
-			ADDITIONAL_PARAMETERS=${PERSISTENT_MODE_AWS}
+		if [[ "${PERSISTENT_MODE}" == True ]]; then
+			ADDITIONAL_PARAMETERS="${ADDITIONAL_PARAMETERS} ${PERSISTENT_MODE_AWS}"
 		fi
-		
+
 		if [[ "${FORCE_RENEWAL}" == True ]]; then
-			ADDITIONAL_PARAMETERS=${FORCE_RENEWAL_AWS}
+			ADDITIONAL_PARAMETERS="${ADDITIONAL_PARAMETERS} ${FORCE_RENEWAL_AWS}"
 		fi
 	else
 		if [[ "${FORCE_RENEWAL}" == True ]]; then
-			ADDITIONAL_PARAMETERS=${FORCE_RENEWAL_CERTBOT}
-		fi	
+			ADDITIONAL_PARAMETERS="${ADDITIONAL_PARAMETERS} ${FORCE_RENEWAL_CERTBOT}"
+		fi
 	fi
 }
 
