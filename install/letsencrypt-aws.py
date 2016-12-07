@@ -423,7 +423,6 @@ def update_cert(logger, acme_client, force_issue, cert_request, target_certifica
             save_certificates_to_disc(
                 logger, cert_request, target_certificate_dir, pem_certificate_chain, private_key)
 
-
     finally:
         for authz_record in authorizations:
             logger.emit(
@@ -519,7 +518,6 @@ def save_file_to_s3(logger, body, s3_uri):
     bucket = s3_uri.host
     key = s3_uri.path[1:]  # uri.path includes a leading "/"
 
-
     logger.emit("Saving file to S3 bucket", Bucket=bucket, Key=key)
     response = s3_client.put_object(Body=body, Bucket=bucket, Key=key)
     logger.emit("Response from AWS S3: ", Response=response)
@@ -572,8 +570,7 @@ def cli():
 )
 @click.option(
     "--force-issue", is_flag=True, help=(
-        "Issue a new certificate, even if the old one isn't close to "
-        "expiration."
+        "Issue a new certificate, even if the old one isn't close to expiration."
     )
 )
 def update_certificates(persistent=False, force_issue=False):
@@ -674,7 +671,6 @@ def register(email, out):
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.TraditionalOpenSSL,
         encryption_algorithm=serialization.NoEncryption())
-
 
     if acme_account_key:
         save_acme_key_as_file(logger, private_key_bytes, acme_account_key)
