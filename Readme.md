@@ -1,21 +1,22 @@
-______
-Usage:
+
+Usage
+=====
 
 
---Global Environment Variables--
+	--Global Environment Variables--
 
-	Required:
-		PRODUCTION_MODE: True or False. Use LetsEncrypt's staging or production server to register or get a certificate.
+		Required:
+			PRODUCTION_MODE: True or False. Use LetsEncrypt's staging or production server to register or get a certificate.
 
 
 
-**Commands**
+	**Commands**
 
-________________
-get_certificate:	
+	________________
+	get_certificate:	
 
-Automatically download or renew certificate of domain(s) provided through the DOMAIN_NAMES environment variable.
-						
+	Automatically download or renew certificate of domain(s) provided through the DOMAIN_NAMES environment variable.
+
 		--Additional Environment Variables--
 		
 			--> Both inside and outside AWS:
@@ -55,15 +56,15 @@ Automatically download or renew certificate of domain(s) provided through the DO
 					ACME_DIRECTORY_URL_PRODUCTION: Production URL for LetsEncrypt. Default = ${ACME_DIRECTORY_URL_PRODUCTION_DEFAULT}
 					ACME_DIRECTORY_URL_STAGING: Staging URL for LetsEncrypt. Default = ${ACME_DIRECTORY_URL_STAGING_DEFAULT}
 
-_____________
-register:		
+	_________
+	register:		
 
-Manually registers the provided email address with LetsEncrypt/ACME.
-Returns a private key in stout, or in a file if PRIVATE_KEY_PATH is provided. 
+	Manually registers the provided email address with LetsEncrypt/ACME.
+	Returns a private key in stout, or in a file if PRIVATE_KEY_PATH is provided. 
 
-Currently this account is currently only used when running behind an AWS ELB.
-In all other situations the registration is done automatically by Certbot. 
-In that case the private key is saved to ${LETSENCRYPT_BASEDIR}
+	Currently this account is currently only used when running behind an AWS ELB.
+	In all other situations the registration is done automatically by Certbot. 
+	In that case the private key is saved to ${LETSENCRYPT_BASEDIR}
 						
 		--Additional Environment Variables--
 		
@@ -77,12 +78,12 @@ In that case the private key is saved to ${LETSENCRYPT_BASEDIR}
 							'file://C:/path/to/key.pem' (local file Windows), or 
 							's3://bucket-name/object-name'.
 			
--h or --help or help: Display help text
+	-h or --help or help: Display help text
 
 
 
 Volumes
--------
+=======
 
 When pairing cvast-letsencrypt with a web server container, a few volumes need to be created to allow communication between your containers.
 
