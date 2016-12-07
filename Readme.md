@@ -2,10 +2,10 @@
 Usage
 =====
 
-
+  
 	Global Environment Variables
 	----------------------------
- 
+
 		Required:
 			PRODUCTION_MODE: True or False. Use LetsEncrypt's staging or production server to register or get a certificate.
 
