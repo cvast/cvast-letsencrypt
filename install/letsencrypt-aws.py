@@ -489,11 +489,15 @@ def save_certificates_to_disc(logger, cert_request, target_certificate_dir, pem_
     target_certificate_domaindir = os.path.join(target_certificate_dir, primary_hostname)
     target_certificate_path = os.path.join(target_certificate_domaindir, CERTIFICATE_FILENAME)
     target_privatekey_path = os.path.join(target_certificate_domaindir, PRIVATEKEY_FILENAME)
-    
+    private_key_bytes = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption())
+
     save_file_to_disc(logger, pem_certificate_chain, target_certificate_path)
-    save_binary_to_disc(logger, private_key, target_privatekey_path)
-    
-    
+    save_binary_to_disc(logger, private_key_bytes, target_privatekey_path)
+
+
 def save_file_to_s3(logger, body, s3_uri):
     session = boto3.Session()
     s3_client = session.client("s3")
