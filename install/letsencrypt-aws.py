@@ -555,11 +555,6 @@ def create_folder_if_not_exists(file_path):
         os.makedirs(folder_path)
 
 
-def get_sleep_duration():
-    sleep_time = os.environ["LETSENCRYPT_RENEWAL_SLEEP_TIME"]
-    return DEFAULT_PERSISTENT_SLEEP_INTERVAL if sleep_time is None else sleep_time
-
-
 def get_filepath(uri):
     if uri.host is None:
         return uri.path
@@ -608,6 +603,9 @@ def update_certificates(persistent=False, force_issue=False):
     target_certificate_dir = config.get(
         "target_certificate_dir", None
     )
+    sleep_time = float(config.get(
+        "renew_interval", None)
+    )
 
     certificate_requests = []
     for domain in domains:
@@ -630,7 +628,8 @@ def update_certificates(persistent=False, force_issue=False):
 
     if persistent:
         logger.emit("running", mode="persistent")
-        sleep_time = get_sleep_duration()
+        if not sleep_time:
+            sleep_time = DEFAULT_PERSISTENT_SLEEP_INTERVAL
         while True:
             update_certs(
                 logger, acme_client,

@@ -24,7 +24,8 @@ LETSENCRYPT_DOMAIN_DIR=${LETSENCRYPT_LIVEDIR}/${PRIMARY_DOMAIN_NAME}
 LETSENCRYPT_CERTIFICATE_PATH=${LETSENCRYPT_DOMAIN_DIR}/fullchain.pem
 LETSENCRYPT_PRIVATE_KEY_PATH=${LETSENCRYPT_DOMAIN_DIR}/privkey.pem
 LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
-LETSENCRYPT_RENEWAL_SLEEP_TIME="${LETSENCRYPT_RENEWAL_SLEEP_TIME:-24h}"
+LETSENCRYPT_RENEWAL_SLEEP_TIME_DEFAULT=$((60 * 60 * 24))
+LETSENCRYPT_RENEWAL_SLEEP_TIME="${LETSENCRYPT_RENEWAL_SLEEP_TIME:-$LETSENCRYPT_RENEWAL_SLEEP_TIME_DEFAULT}"
 
 ACME_DIRECTORY_URL_PRODUCTION_DEFAULT="https://acme-v01.api.letsencrypt.org/directory"
 ACME_DIRECTORY_URL_STAGING_DEFAULT="https://acme-staging.api.letsencrypt.org/directory"
@@ -91,7 +92,7 @@ Automatically download or renew certificate of domain(s) provided through the DO
 								certificates renewed automatically. Default = False.
 					ADDITIONAL_PARAMETERS: Additional parameters for either Certbot or letsencrypt-aws,
 								other than those controlled by FORCE_RENEWAL and PERSISTENT_MODE.
-					LETSENCRYPT_RENEWAL_SLEEP_TIME: Interval between renewal checks. Default = 24 hours.
+					LETSENCRYPT_RENEWAL_SLEEP_TIME: Interval between renewal checks in seconds. Default = ${LETSENCRYPT_RENEWAL_SLEEP_TIME_DEFAULT}.
 
 			--> Outside AWS:
 				+ Required:
@@ -245,7 +246,8 @@ set_letsencrypt_aws_config() {
 		],
 		\"acme_account_key\": \"${PRIVATE_KEY_PATH}\",
 		\"acme_directory_url\": \"${ACME_DIRECTORY_URL}\",
-		\"target_certificate_dir\": \"${LETSENCRYPT_LIVEDIR}\"
+		\"target_certificate_dir\": \"${LETSENCRYPT_LIVEDIR}\",
+		\"renew_interval\": \"${LETSENCRYPT_RENEWAL_SLEEP_TIME}\"
 	}
 "
 
