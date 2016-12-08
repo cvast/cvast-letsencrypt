@@ -5,18 +5,19 @@ Developed by the Center for Virtualization and Applied Spatial Technologies (CVA
 University of South Florida
 
 
-This tool can download and renew certificates. It can be paired with Docker containers running web servers (e.g. Nginx). It also works for servers running on Amazon Web Services (AWS) behind an Elastic Load Balancer (ELB).
+This tool can download and renew certificates. It can be paired with Docker containers running web servers (e.g. Nginx).  
+It also works for servers running on Amazon Web Services (AWS) behind an Elastic Load Balancer (ELB).
 
 Additionally, it can be used to register with LetsEncrypt using your email address (this is done automatically when running a server not behind an AWS ELB).
 
-Based on:
-- letsencrypt-aws (https://github.com/alex/letsencrypt-aws)
-- Official Certbot client (https://certbot.eff.org)  
+Based on:  
+  - letsencrypt-aws (https://github.com/alex/letsencrypt-aws)  
+  - Official Certbot client (https://certbot.eff.org)  
   
-Tested on:
-- Localhost (registration only)
-- Single AWS EC2 instance paired with an NginX container
-- AWS ECS cluster running behind an Elastic Load Balancer (also paired with an Nginx container)  
+Tested on:  
+  - Localhost (registration only)  
+  - Single AWS EC2 instance paired with an NginX container
+  - AWS ECS cluster running behind an Elastic Load Balancer (also paired with an Nginx container)  
   
   
 _____________________
