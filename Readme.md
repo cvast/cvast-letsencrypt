@@ -5,10 +5,11 @@ Developed by the Center for Virtualization and Applied Spatial Technologies (CVA
 University of South Florida
 
 
-This tool can download and renew certificates. It can be paired with Docker containers running web servers (e.g. Nginx).  
+This tool lets you download and renew certificates. It can be paired with Docker containers running web servers (e.g. Nginx).  
 It also works for servers running on Amazon Web Services (AWS) behind an Elastic Load Balancer (ELB).
 
-Additionally, it can be used to register with LetsEncrypt using your email address (this is done automatically when running a server not behind an AWS ELB).
+Additionally, it can be used to register with LetsEncrypt using your email address  
+(this is done automatically when running a server not behind an AWS ELB).
 
 Based on:  
   - letsencrypt-aws (https://github.com/alex/letsencrypt-aws)  
@@ -45,7 +46,7 @@ Automatically download or renew certificate of domain(s) provided through the DO
             - FORCE_RENEWAL: True or False. Force issue of a certificate, even if it is not due for renewal. Default = False.
             - PERSISTENT_MODE: True or False. Keep this Docker container running as a service in order to have your 
             certificates renewed automatically. Default = False.
-            - ADDITIONAL_PARAMETERS: Additional parameters for either Certbot or letsencrypt-aws, other than those controlled              by FORCE_RENEWAL and PERSISTENT_MODE.
+            - ADDITIONAL_PARAMETERS: Additional parameters for either Certbot or letsencrypt-aws, other than those controlled by FORCE_RENEWAL and PERSISTENT_MODE.
             - LETSENCRYPT_RENEWAL_SLEEP_TIME: Interval between renewal checks. Default = 24 hours.
 
     - __Outside AWS__:

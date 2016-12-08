@@ -53,8 +53,11 @@ Developed by the Center for Virtualization and Applied Spatial Technologies (CVA
 University of South Florida
 
 
-This tool can download and renew certificates, including for servers running on Amazon Web Services (AWS) behind an Elastic Load Balancer(ELB).
-It can also be used to register with LetsEncrypt using your email address (this is done automatically when running a server not behind an AWS ELB).
+This tool lets you download and renew certificates. It can be paired with Docker containers running web servers (e.g. Nginx).  
+It also works for servers running on Amazon Web Services (AWS) behind an Elastic Load Balancer (ELB).
+
+Additionally, it can be used to register with LetsEncrypt using your email address 
+(this is done automatically when running a server not behind an AWS ELB).
 
 Based on:
 	- letsencrypt-aws (https://github.com/alex/letsencrypt-aws)
@@ -77,6 +80,12 @@ Usage:
 
 
 **Commands**
+
+_____________________
+-h or --help or help: 
+
+Display help text
+
 
 ________________
 get_certificate:
@@ -124,7 +133,8 @@ Automatically download or renew certificate of domain(s) provided through the DO
 					ACME_DIRECTORY_URL_PRODUCTION: Production URL for LetsEncrypt. Default = ${ACME_DIRECTORY_URL_PRODUCTION_DEFAULT}
 					ACME_DIRECTORY_URL_STAGING: Staging URL for LetsEncrypt. Default = ${ACME_DIRECTORY_URL_STAGING_DEFAULT}
 
-_____________
+
+_________
 register:
 
 Manually registers the provided email address with LetsEncrypt/ACME.
@@ -145,9 +155,6 @@ In that case the private key is saved to ${LETSENCRYPT_BASEDIR}
 							Format: 'file:///path/to/key.pem' (local file Unix),
 							'file://C:/path/to/key.pem' (local file Windows), or
 							's3://bucket-name/object-name'.
-
--h or --help or help: Display help text
-
 
 
 
