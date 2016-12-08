@@ -119,11 +119,11 @@ When pairing cvast-letsencrypt with a web server container, a few volumes need t
 	      restart: always
 	      image: nginx
 	      ports:
-		- '80:80'
-		- '443:443'
+	        - '80:80'
+	        - '443:443'
 	      volumes:
-		- nginx-root:/var/www
-		- letsencrypt-config:/etc/letsencrypt
+	        - nginx-root:/var/www
+	        - letsencrypt-config:/etc/letsencrypt
 
 	    letsencrypt:
 	      image: cvast/cvast-letsencrypt:1.0
@@ -132,21 +132,21 @@ When pairing cvast-letsencrypt with a web server container, a few volumes need t
 		dockerfile: ./Dockerfile
 	      command: get_certificate
 	      volumes:
-		- web-root:/var/www
-		- letsencrypt-config:/etc/letsencrypt
-		- letsencrypt-log:/var/log/letsencrypt
-		- letsencrypt-workdir:/var/lib/letsencrypt
+	        - web-root:/var/www
+	        - letsencrypt-config:/etc/letsencrypt
+	        - letsencrypt-log:/var/log/letsencrypt
+	        - letsencrypt-workdir:/var/lib/letsencrypt
 	      environment:
-		- LETSENCRYPT_EMAIL=example@mail.edu
-		- DOMAIN_NAMES=example.com www.example.com
-		- PRODUCTION_MODE=False
-		# - PRIVATE_KEY_PATH=s3://bucket-name/object-name.pem
-		- PRIVATE_KEY_PATH=file:///path/to/object-name.pem
-		- AWS_ACCESS_KEY_ID=
-		- AWS_SECRET_ACCESS_KEY=
-		- AWS_DEFAULT_REGION=
-		- FORCE_RENEWAL=False
-		- PERSISTENT_MODE=False
+	        - LETSENCRYPT_EMAIL=example@mail.edu
+	        - DOMAIN_NAMES=example.com www.example.com
+	        - PRODUCTION_MODE=False
+	        # - PRIVATE_KEY_PATH=s3://bucket-name/object-name.pem
+	        - PRIVATE_KEY_PATH=file:///path/to/object-name.pem
+	        - AWS_ACCESS_KEY_ID=
+	        - AWS_SECRET_ACCESS_KEY=
+	        - AWS_DEFAULT_REGION=
+	        - FORCE_RENEWAL=False
+	        - PERSISTENT_MODE=False
 
 	  volumes:
 	    web-root:
