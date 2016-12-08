@@ -256,8 +256,7 @@ set_letsencrypt_aws_config() {
 
 get_domain_name_parameters_aws() {
 	local letsencrypt_domain_parameters=""
-	domain_name_array=(${DOMAIN_NAMES})
-	for domain_name in ${domain_name_array}; do
+	for domain_name in ${DOMAIN_NAMES}; do
 		if [[ "${letsencrypt_domain_parameters}" == "" ]]; then
 			letsencrypt_domain_parameters+="\"${domain_name}\""
 		else
