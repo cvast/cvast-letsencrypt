@@ -102,7 +102,7 @@ In that case the private key is saved to /etc/letsencrypt
 
 
 
-
+_____________________
 
 
 
@@ -122,7 +122,7 @@ When pairing cvast-letsencrypt with a web server container, a few volumes need t
         - letsencrypt-config:/etc/letsencrypt
     
     letsencrypt:
-      image: cvast/cvast-letsencrypt:1
+      image: cvast/cvast-letsencrypt:1.0
       volumes:
         - nginx-root:/var/www
         - letsencrypt-config:/etc/letsencrypt
