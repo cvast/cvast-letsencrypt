@@ -112,30 +112,47 @@ When pairing cvast-letsencrypt with a web server container, a few volumes need t
 
 ##### docker-compose.yml when not behind an AWS ELB:  
 
-    nginx:
-      image: your-webserver-image/your-repository:build-number
-      ports:
-        - '80:80'
-        - '443:443'
-      volumes:
-        - webserver-root:/var/www
-        - letsencrypt-config:/etc/letsencrypt
-    
-    letsencrypt:
-      image: cvast/cvast-letsencrypt:1.0
-      volumes:
-        - nginx-root:/var/www
-        - letsencrypt-config:/etc/letsencrypt
-      command: get_certificate
-      environment:
-        - FORCE_NON_ELB=True
-        - LETSENCRYPT_EMAIL=your-email@example.com
-        - DOMAIN_NAMES=example.com www.example.com
-        - PRODUCTION_MODE=False
-        
-    volumes:
-        webserver-root:
-        letsencrypt-config:
+	version: '2'
+	services:   
+
+	    nginx:
+	      restart: always
+	      image: nginx
+	      ports:
+		- '80:80'
+		- '443:443'
+	      volumes:
+		- nginx-root:/var/www
+		- letsencrypt-config:/etc/letsencrypt
+
+	    letsencrypt:
+	      image: cvast/cvast-letsencrypt:1.0
+	      build: 
+		context: .
+		dockerfile: ./Dockerfile
+	      command: get_certificate
+	      volumes:
+		- web-root:/var/www
+		- letsencrypt-config:/etc/letsencrypt
+		- letsencrypt-log:/var/log/letsencrypt
+		- letsencrypt-workdir:/var/lib/letsencrypt
+	      environment:
+		- LETSENCRYPT_EMAIL=example@mail.edu
+		- DOMAIN_NAMES=example.com www.example.com
+		- PRODUCTION_MODE=False
+		# - PRIVATE_KEY_PATH=s3://bucket-name/object-name.pem
+		- PRIVATE_KEY_PATH=file:///path/to/object-name.pem
+		- AWS_ACCESS_KEY_ID=
+		- AWS_SECRET_ACCESS_KEY=
+		- AWS_DEFAULT_REGION=
+		- FORCE_RENEWAL=False
+		- PERSISTENT_MODE=False
+
+	  volumes:
+	    web-root:
+	    letsencrypt-config:
+	    letsencrypt-log:
+	    letsencrypt-workdir:
         
 ##### Configuration when behind an AWS ELB:
 Same as docker-compose.yml shown above, but without the nginx-root volume (ACME challange is done on Route 53 level instead of your web server).
