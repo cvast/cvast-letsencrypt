@@ -156,3 +156,107 @@ When pairing cvast-letsencrypt with a web server container, a few volumes need t
         
 ##### Configuration when behind an AWS ELB:
 Same as docker-compose.yml shown above, but without the nginx-root volume (ACME challange is done on Route 53 level instead of your web server).
+
+
+
+# AWS IAM Policy
+
+##### AWS ELB
+When running behind an ELB, certain priviledges are required. Sample IAM policy:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Action": [
+                "route53:ChangeResourceRecordSets",
+                "route53:GetChange",
+                "route53:GetChangeDetails",
+                "route53:ListHostedZones"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Action": [
+                "elasticloadbalancing:DescribeLoadBalancers",
+                "elasticloadbalancing:SetLoadBalancerListenerSSLCertificate"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Action": [
+                "iam:ListServerCertificates",
+                "iam:GetServerCertificate",
+                "iam:UploadServerCertificate"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetBucketLocation"
+            ],
+            "Resource": "arn:aws:s3:::*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": [
+                "arn:aws:s3:::bucket-name/optional-folder-name/*"
+            ]
+        }
+    ]
+}
+```
+
+##### Non-AWS access
+Alternatively (e.g. when not running on an AWS server, but still using an S3 bucket for storage), you can create a user policy that allows access. Be sure to specify these envrionment variables in the letsencrypt container:
+  - AWS_ACCESS_KEY_ID
+  - AWS_SECRET_ACCESS_KEY
+  - AWS_DEFAULT_REGION
+
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ecs:List*",
+                "ecs:Describe*",
+                "ecs:UpdateService",
+                "ecs:RegisterTaskDefinition",
+                "application-autoscaling:Describe*",
+                "application-autoscaling:PutScalingPolicy",
+                "application-autoscaling:DeleteScalingPolicy",
+                "application-autoscaling:RegisterScalableTarget"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject"
+            ],
+            "Resource": "arn:aws:s3:::cvast-config/letsencrypt/*"
+        }
+    ]
+}
+```
