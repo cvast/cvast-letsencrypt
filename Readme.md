@@ -236,22 +236,6 @@ Alternatively (e.g. when not running on an AWS server, but still using an S3 buc
         {
             "Effect": "Allow",
             "Action": [
-                "ecs:List*",
-                "ecs:Describe*",
-                "ecs:UpdateService",
-                "ecs:RegisterTaskDefinition",
-                "application-autoscaling:Describe*",
-                "application-autoscaling:PutScalingPolicy",
-                "application-autoscaling:DeleteScalingPolicy",
-                "application-autoscaling:RegisterScalableTarget"
-            ],
-            "Resource": [
-                "*"
-            ]
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
                 "s3:PutObject",
                 "s3:GetObject"
             ],
