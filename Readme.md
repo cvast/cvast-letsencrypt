@@ -55,10 +55,9 @@ Automatically download or renew certificate of domain(s) provided through the DO
           - LETSENCRYPT_EMAIL: Email address to be registered with LetsEncrypt.
     
         - Optional:
-            - WEB_ROOT: Path used as root for ACME challange. Also point to this path in your web server configuration
+            - WEB_ROOT: Path used as root for ACME challange. Default = /var/www. Also point to this path in your web server configuration
                 (see volume 'webserver-root' in docker-compose.yml below).
                 e.g.: location ~ /.well-known/acme-challenge { allow all; root /var/www; }
-                Default = /var/www
     
     - __Inside AWS__:
         + Required:
