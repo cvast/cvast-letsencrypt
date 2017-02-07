@@ -9,7 +9,7 @@ This tool lets you download and renew certificates. It can be paired with Docker
 It also works for servers running on Amazon Web Services (AWS) behind an Elastic Load Balancer (ELB).
 
 Additionally, it can be used to register with LetsEncrypt using your email address  
-(this is done automatically when running a server not behind an AWS ELB).
+(only required when running behind an AWS ELB).
 
 Based on:  
   - letsencrypt-aws (https://github.com/alex/letsencrypt-aws)  
@@ -38,32 +38,34 @@ __-h__ or __--help__ or __help__:
 Display help text
 
 __get_certificate__:	
-Automatically download or renew certificate of domain(s) provided through the DOMAIN_NAMES environment variable.
+Automatically download or renew certificate for domain(s) provided through the DOMAIN_NAMES environment variable.
 
   - Additional Environment Variables
-    - __Both inside and outside AWS__:
+    - __Both regular and AWS ELB mode__:
+		+ Required:
+          - DOMAIN_NAMES: List of domain names (in a regular string).
+		
         - Optional:
-            - FORCE_RENEWAL: True or False. Force issue of a certificate, even if it is not due for renewal. Default = False.
-            - PERSISTENT_MODE: True or False. Keep this Docker container running as a service in order to have your 
+			- MODE: regular|elb. Default = regular. Set to 'elb' when running behind an AWS Elastic Load Balancer.
+            - FORCE_RENEWAL: True|False. Force issue of a certificate, even if it is not due for renewal. Default = False.
+            - PERSISTENT_MODE: True|False. Keep this Docker container running as a service in order to have your 
             certificates renewed automatically. Default = False.
             - ADDITIONAL_PARAMETERS: Additional parameters for either Certbot or letsencrypt-aws, other than those controlled by FORCE_RENEWAL and PERSISTENT_MODE.
             - LETSENCRYPT_RENEWAL_SLEEP_TIME: Interval between renewal checks. Default = 24 hours.
 
-    - __Outside AWS__:
+    - __Regular mode__:
         + Required:
-          - DOMAIN_NAMES: List of domain names (in a regular string).
           - LETSENCRYPT_EMAIL: Email address to be registered with LetsEncrypt.
     
         - Optional:
-            - WEB_ROOT: Path used as root for ACME challange. Default = /var/www. Also point to this path in your web server configuration
-                (see volume 'webserver-root' in docker-compose.yml below).
+            - WEB_ROOT: Path used as root for ACME challange. Default = /var/www. 
+				Mount this folder to both the LetsEncrypt and web server container
+				(see volume 'web-root' in docker-compose.yml below). 
+				Also point to this path in your web server configuration,
                 e.g.: location ~ /.well-known/acme-challenge { allow all; root /var/www; }
     
-    - __Inside AWS__:
+    - __AWS ELB mode__:
         + Required:
-            - FORCE_NON_ELB: True of False. Set this to true when running on AWS, but not behind an ELB. 
-                (We can not check this, only if it runs on an AWS EC2 instance or not.)
-            - DOMAIN_NAMES: List of domain names (in a regular string).
             - ELB_NAME: Elastic Load Balancer name.
             - PRIVATE_KEY_PATH: Location of your LetsEncrypt/ACME account private key (local or AWS S3). 
                 Format: 'file:///path/to/key.pem' (local file Unix), 
@@ -73,7 +75,7 @@ Automatically download or renew certificate of domain(s) provided through the DO
             - AWS_DEFAULT_REGION: The AWS region your services are running in.
     
         - Optional:
-            - KEY_TYPE: rsa or ecdsa. Default = rsa.
+            - KEY_TYPE: rsa|ecdsa. Default = rsa.
             - ELB_PORT: Port used by Elastic Load Balancer. Default = 443.
             - LETSENCRYPT_BASEDIR: Base directory for LetsEncrypt files. Default = /etc/letsencrypt
             - ACME_DIRECTORY_URL_PRODUCTION: Production URL for LetsEncrypt. Default =  https://acme-v01.api.letsencrypt.org/directory
@@ -84,9 +86,9 @@ __register__:
 Manually registers the provided email address with LetsEncrypt/ACME.
 Returns a private key in stout, or in a file if PRIVATE_KEY_PATH is provided. 
 
-Currently this account is currently only used when running behind an AWS ELB.
+Use this when running in ELB mode.
 In all other situations the registration is done automatically by Certbot. 
-In that case the private key is saved to /etc/letsencrypt
+In that case the private key is saved to /etc/letsencrypt.
 
   - Additional Environment Variables
     + Required:
@@ -121,26 +123,22 @@ When pairing cvast-letsencrypt with a web server container, a few volumes need t
 	        - '80:80'
 	        - '443:443'
 	      volumes:
-	        - nginx-root:/var/www
+	        - web-root:/var/www
 	        - letsencrypt-config:/etc/letsencrypt
 
 	    letsencrypt:
 	      image: cvast/cvast-letsencrypt:1.0
-	      build: 
-		context: .
-		dockerfile: ./Dockerfile
 	      command: get_certificate
 	      volumes:
 	        - web-root:/var/www
 	        - letsencrypt-config:/etc/letsencrypt
 	        - letsencrypt-log:/var/log/letsencrypt
-	        - letsencrypt-workdir:/var/lib/letsencrypt
 	      environment:
 	        - LETSENCRYPT_EMAIL=example@mail.edu
 	        - DOMAIN_NAMES=example.com www.example.com
 	        - PRODUCTION_MODE=False
 	        # - PRIVATE_KEY_PATH=s3://bucket-name/object-name.pem
-	        - PRIVATE_KEY_PATH=file:///path/to/object-name.pem
+	        # - PRIVATE_KEY_PATH=file:///path/to/object-name.pem
 	        - AWS_ACCESS_KEY_ID=
 	        - AWS_SECRET_ACCESS_KEY=
 	        - AWS_DEFAULT_REGION=
@@ -151,7 +149,6 @@ When pairing cvast-letsencrypt with a web server container, a few volumes need t
 	    web-root:
 	    letsencrypt-config:
 	    letsencrypt-log:
-	    letsencrypt-workdir:
         
 ##### Configuration when behind an AWS ELB:
 Same as docker-compose.yml shown above, but without the nginx-root volume (ACME challange is done on Route 53 level instead of your web server).
