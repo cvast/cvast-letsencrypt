@@ -158,9 +158,12 @@ In that case the private key is saved to /etc/letsencrypt.
 "
 
 
+
 #### Basic functions
 
-# Default LetsEncrypt functions
+
+## Default LetsEncrypt functions
+
 download_certificates() {
 	echo "Preparing to download new certificate from LetsEncrypt..."
 	mkdir -p ${WEB_ROOT}/${PRIMARY_DOMAIN_NAME}
@@ -176,7 +179,7 @@ download_certificates() {
 		--non-interactive \
 		--email ${LETSENCRYPT_EMAIL} \
 		--webroot \
-		-w ${WEB_ROOT} \
+		--webroot-path ${WEB_ROOT} \
 		${LETSENCRYPT_DOMAIN_PARAMETERS} \
 		${PROD_OR_STAGING} \
 		${ADDITIONAL_PARAMETERS}
@@ -212,8 +215,12 @@ get_domain_name_parameters() {
 	echo ${letsencrypt_domain_parameters}
 }
 
+## End Default LetsEncrypt functions
 
-# AWS-specific LetsEncrypt functions
+
+
+## AWS-specific LetsEncrypt functions
+
 check_if_aws() {
 	set +e
 	# If we can get an AWS private ip, it means we are on an EC2 instance
@@ -279,13 +286,18 @@ register_emailaddress() {
 	python letsencrypt-aws.py register ${LETSENCRYPT_EMAIL}
 }
 
+## End AWS-specific LetsEncrypt functions
+
+
+
+
+## Misc
+
 display_domain_names() {
 	echo "Provided domain names: ${DOMAIN_NAMES}"
 	echo "Primary domain name: ${PRIMARY_DOMAIN_NAME}"
 }
 
-
-# Misc
 check_variable() {
 	local VARIABLE_VALUE=$1
 	local VARIABLE_NAME=$2
@@ -350,6 +362,7 @@ display_help() {
 	echo "${HELP_TEXT}"
 }
 
+## End Misc
 
 
 
