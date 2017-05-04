@@ -22,8 +22,9 @@ ENV KEY_TYPE=rsa
 ENV HTTPS_PORT=443
 
 WORKDIR ${INSTALL_DIR}
-RUN curl -O https://bootstrap.pypa.io/get-pip.py
-RUN python get-pip.py
+RUN curl -O https://bootstrap.pypa.io/get-pip.py &&\
+	python get-pip.py &&\
+	pip install --upgrade --user awscli
 
 COPY ${INSTALL_DIR_LOCAL}/letsencrypt_aws_requirements.txt ${INSTALL_DIR}/letsencrypt_aws_requirements.txt
 RUN pip install -r ${INSTALL_DIR}/letsencrypt_aws_requirements.txt

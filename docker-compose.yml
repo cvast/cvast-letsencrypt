@@ -8,7 +8,7 @@ services:
         - '80:80'
         - '443:443'
       volumes:
-        - nginx-root:/var/www
+        - web-root:/var/www
         - letsencrypt-config:/etc/letsencrypt
         
     letsencrypt:

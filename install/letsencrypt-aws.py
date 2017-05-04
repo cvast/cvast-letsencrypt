@@ -197,6 +197,8 @@ class Route53ChallengeCompleter(object):
             host,
             value,
         )
+		txt_record_filepath = config.get("acme_challenge_txt_path", None)
+		save_file_to_disc(logger, value, os.path.join(txt_record_filepath, value)
         return (zone_id, change_id)
 
     def delete_txt_record(self, change_id, host, value):
@@ -286,6 +288,7 @@ def start_dns_challenge(logger, acme_client, dns_challenge_completer,
         "updating-elb.create-txt-record", elb_name=elb_name, host=host
     )
     change_id = dns_challenge_completer.create_txt_record(
+        logger,
         dns_challenge.validation_domain_name(host),
         dns_challenge.validation(acme_client.key),
 

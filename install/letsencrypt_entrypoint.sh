@@ -33,6 +33,8 @@ ACME_DIRECTORY_URL_PRODUCTION="${ACME_DIRECTORY_URL_PRODUCTION:-$ACME_DIRECTORY_
 ACME_DIRECTORY_URL_STAGING="${ACME_DIRECTORY_URL_STAGING:-$ACME_DIRECTORY_URL_STAGING_DEFAULT}"
 ACME_DIRECTORY_URL=${ACME_DIRECTORY_URL_STAGING}
 
+ACME_CHALLENGE_TXT_PATH="${ACME_CHALLENGE_TXT_PATH:-/var/www/.well-known/acme-challenge}"
+
 KEY_TYPE="${KEY_TYPE:-rsa}"
 FORCE_RENEWAL="${FORCE_RENEWAL:-False}"
 FORCE_RENEWAL_CERTBOT="--force-renewal"
@@ -256,6 +258,7 @@ set_letsencrypt_aws_config() {
 		],
 		\"acme_account_key\": \"${PRIVATE_KEY_PATH}\",
 		\"acme_directory_url\": \"${ACME_DIRECTORY_URL}\",
+		\"acme_challenge_txt_path\": \"${ACME_CHALLENGE_TXT_PATH}\"		
 		\"target_certificate_dir\": \"${LETSENCRYPT_LIVEDIR}\",
 		\"renew_interval\": \"${LETSENCRYPT_RENEWAL_SLEEP_TIME}\"
 	}
