@@ -1,5 +1,5 @@
 acme[dns]>=0.9
-boto3>=1.2.3
+boto3>=1.4.1
 click>=6.2
 cryptography>=1.1.2
 pyopenssl>=0.15.1

@@ -83,25 +83,34 @@ class ELBCertificate(object):
         self.iam_client = iam_client
         self.elb_name = elb_name
         self.elb_port = elb_port
+        self.elb_listner_arn = None
 
     def get_current_certificate(self):
-        response = self.elb_client.describe_load_balancers(
-            LoadBalancerNames=[self.elb_name]
+        load_balancers_response = self.elb_client.describe_load_balancers(
+            Names=[self.elb_name]
         )
-        [description] = response["LoadBalancerDescriptions"]
+        [load_balancer] = load_balancers_response["LoadBalancers"]
+
+        listeners_response = self.elb_client.describe_listeners(
+            LoadBalancerArn=load_balancer["LoadBalancerArn"],
+        )        
+        
         [elb_listener] = [
-            listener["Listener"]
-            for listener in description["ListenerDescriptions"]
-            if listener["Listener"]["LoadBalancerPort"] == self.elb_port
+            listener
+            for listener in listeners_response["Listeners"]
+            if listener["Port"] == self.elb_port
         ]
 
-        if "SSLCertificateId" not in elb_listener:
+        self.elb_listner_arn = elb_listener["ListenerArn"];
+        elb_listener_certificates = elb_listener["Certificates"];
+
+        if not elb_listener_certificates:
             raise ValueError(
-                "A certificate must already be configured for the ELB"
-            )
+            "A certificate must already be configured for the ELB"
+        )
 
         return _get_iam_certificate(
-            self.iam_client, elb_listener["SSLCertificateId"]
+            self.iam_client, elb_listener_certificates[0]["CertificateArn"]
         )
 
     def update_certificate(self, logger, hosts, private_key, pem_certificate,
@@ -131,10 +140,9 @@ class ELBCertificate(object):
         # fail without this.
         time.sleep(15)
         logger.emit("updating-elb.set-elb-certificate", elb_name=self.elb_name)
-        self.elb_client.set_load_balancer_listener_ssl_certificate(
-            LoadBalancerName=self.elb_name,
-            SSLCertificateId=new_cert_arn,
-            LoadBalancerPort=self.elb_port,
+        self.elb_client.modify_listener(
+            ListenerArn=self.elb_listner_arn,
+            Certificates=[{"CertificateArn": new_cert_arn}],
         )
 
 
@@ -587,7 +595,7 @@ def update_certificates(persistent=False, force_issue=False):
 
     session = boto3.Session()
     s3_client = session.client("s3")
-    elb_client = session.client("elb")
+    elb_client = session.client("elbv2")
     route53_client = session.client("route53")
     iam_client = session.client("iam")
 
